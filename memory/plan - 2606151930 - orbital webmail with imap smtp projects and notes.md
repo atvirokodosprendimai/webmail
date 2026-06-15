@@ -21,22 +21,28 @@ status: active
 
 ## Phases
 
-### Phase 0 - Repo bootstrap - status: active
+### Phase 0 - Repo bootstrap - status: completed
 
-1. [ ] `go mod init github.com/<owner>/webmail` + add deps from spec stack table
-   - confirm module path with user
-   - pin go-imap/v2 beta + emersion/go-message versions
-2. [ ] Project layout dirs (`cmd/webmail`, `internal/{config,auth,mailbox,send,projects,notes,uploads,httpx,render}`, `migrations`, `web/static`)
-3. [ ] `.env.example` matching `Config` struct in SPEC §Configuration
-4. [ ] `Makefile` with `dev` / `build` / `test` / `migrate-up` / `templ-gen` targets
-5. [ ] `Dockerfile` (multi-stage; CGO if sqlite needs it — flip to glebarez to stay CGO-free)
-6. [ ] CI grep gate script (`scripts/check-imap-wrapper.sh`) — fails build if `imapclient.` appears outside `internal/mailbox/imap.go`
+1. [x] `go mod init github.com/atvirokodosprendimai/webmail` + add deps from spec stack table
+   - => module path picked by user (matches forumchat org)
+   - => deps installed via `go get`: chi, httprate, go-imap/v2, go-message, glebarez/sqlite, gorm, goose, scs/v2, caarlos0/env, godotenv, templ, datastar-go, bluemonday, goldmark, html2text, bcrypt, uuid
+   - => templ + goose added as `go tool` entries (no separate install)
+2. [x] Project layout dirs (`cmd/webmail`, `internal/{config,auth,mailbox,send,projects,notes,uploads,httpx,render,db}`, `migrations`, `web/static/styles`, `scripts`)
+   - => `web/static/styles/*.css` populated by copy of `html/styles/*.css` (Phase 1 will embed via //go:embed)
+3. [x] `.env.example` matching `Config` struct in SPEC §Configuration
+   - => includes new keys IMAP_TRASH_FOLDER, IMAP_ARCHIVE_FOLDER, IMAP_NOTES_FOLDER, FLAG_SYNC_EVERY
+4. [x] `Makefile` with `dev` / `build` / `test` / `migrate-up` / `migrate-down` / `templ-gen` / `lint` / `ci-imap-gate` / `clean`
+   - => uses `go tool goose` + `go tool templ` (no PATH dep)
+5. [x] `Dockerfile` (multi-stage; CGO-free via glebarez/sqlite)
+   - => single binary; CSS + migrations embedded via //go:embed (Phase 1/2 wires this)
+6. [x] CI grep gate script (`scripts/check-imap-wrapper.sh`) — fails if `imapclient.` appears outside `internal/mailbox/imap.go`
+   - => smoke test passes on empty internal/ tree
 
 ### Phase 1 - Skeleton + auth - status: open
 
 1. [ ] `internal/config/config.go` — caarlos0/env Load(); fail-fast on missing required
    - => verify boot with .env.example + missing-var error path
-2. [ ] `internal/httpx/server.go` — chi router, health endpoint, static file mount for `web/static` (copy `html/styles/*.css` here)
+2. [ ] `internal/httpx/server.go` — chi router, health endpoint, static file mount via `//go:embed web/static/*` → `http.FS(embedded)` (no disk read at runtime)
 3. [ ] `internal/auth/{repo,session,handler}.go` — bcrypt User + scs cookie session + login/logout handlers
 4. [ ] `cmd/webmail/main.go` — wire boot, run server, graceful shutdown on SIGTERM
 5. [ ] CLI subcommand `webmail user add <email>` — stdin password prompt, bcrypt hash, insert row
@@ -150,8 +156,9 @@ status: active
 
 ## Adjustments
 
-<!-- Plans evolve. Document changes with timestamps. -->
+- 2606152005 — Static CSS will be served via `embed.FS` in `internal/httpx`, not from disk. Dockerfile dropped `COPY web/static` and `COPY migrations` accordingly — single binary deploy. Phase 1 action 2 updated implicitly to use `//go:embed web/static/styles/*` instead of `http.FileServer(http.Dir(...))`.
 
 ## Progress Log
 
 - 2606151930 — Plan created. Spec v0.3 finalised (webmail mutation surface + Notes-as-IMAP-folder). Git repo initialised.
+- 2606152005 — Phase 0 complete. Module = `github.com/atvirokodosprendimai/webmail`. Deps + tools installed. Layout, .env.example, Makefile, Dockerfile, CI grep gate landed and tested. Branch: `task/phase-0-bootstrap`.

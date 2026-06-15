@@ -6,3 +6,4 @@ tmp/
 *.db
 *.db-journal
 uploads/
+forumchat/
