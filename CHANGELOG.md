@@ -12,3 +12,4 @@
 - 2026-06-15 `b486d14` fix: persistent sessions + RFC 5322 From + Sent/Drafts folder view
 - 2026-06-15 `fa3c739` fix(smtp): use SMTP_USERNAME as envelope MAIL FROM; log every send
 - 2026-06-15 `4510169` ui: logout button in shell rail (replaces missing entry from real shell)
+- 2026-06-15 `77e28c8` fix(threading): group inbox by thread + fetch References header
