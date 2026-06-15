@@ -7,3 +7,4 @@ tmp/
 *.db-journal
 uploads/
 forumchat/
+.env*.sw[a-p]

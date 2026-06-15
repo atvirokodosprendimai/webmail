@@ -17,3 +17,4 @@
 - 2026-06-15 `93d12c2` fix(reply): wrap msg-id with <>; pre-fill reply with quoted history
 - 2026-06-15 `8981007` bookmarks: phases 1-5 + scroll fix
 - 2026-06-15 `5aa4a3b` fix: never delete user .env in smoke/clean targets
+- 2026-06-15 `6df9ad0` policy: forbid agent deletion of data/ and .env

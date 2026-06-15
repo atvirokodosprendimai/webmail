@@ -5,3 +5,46 @@
 
 *No recent activity*
 </claude-mem-context>
+
+# webmail repo rules (read on every session)
+
+## Files an agent must NEVER delete
+
+These paths hold irreplaceable user state and are gitignored, so any
+deletion is unrecoverable.
+
+- `.env` — IMAP / SMTP / session credentials.
+- `data/` and anything beneath it:
+  - `data/webmail.db` — users, projects, bookmarks, sessions, poll
+    cursors, ingest rows. The IMAP server can re-supply emails but
+    everything ORBITAL-side is lost.
+  - `data/uploads/` — materialised attachment CAS. Loss = bookmarks
+    and projects with attachments point at gone files.
+
+Rules:
+
+1. Smoke tests MUST run against `tmp/smoke/` or a similar isolated
+   path. Use `make smoke` — never invent ad-hoc `rm -rf data/` lines.
+2. `make clean` removes build artifacts only (`bin/`). It does NOT
+   touch `data/` or `.env`.
+3. The only target allowed to delete DB / uploads is
+   `make reset-db RESET=yes`. The explicit `RESET=yes` is a
+   deliberate barrier against muscle memory.
+4. Before any `rm -rf`, double-check the path is under a build dir
+   (`bin/`, `tmp/`, `/tmp/`) or an explicit temp scratch path.
+
+## Branch protocol
+
+Pre-commit hook blocks `Write` on `main`. Always work on
+`task/<description>`. Phase work + bug fixes sit on
+`task/phase-0-bootstrap` and roll forward.
+
+## IMAP wrapper contract
+
+All `imapclient.*` calls live in `internal/mailbox/imap.go`. CI gate
+`scripts/check-imap-wrapper.sh` enforces. Do not bypass.
+
+## Templ + go.sum
+
+After editing `*.templ` files, run `go tool templ generate` before
+`go build`. The generated `*_templ.go` files are committed.
