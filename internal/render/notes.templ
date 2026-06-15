@@ -12,7 +12,7 @@ type NoteRow struct {
 
 templ NotesIndex(displayName string, counts NavCounts, rows []NoteRow) {
 	@Base("ORBITAL // notes") {
-		<main class="shell">
+		<main class="shell shell--list">
 			@Shell("notes", counts, displayName) {
 				<section class="list">
 					<header class="list__head">
@@ -44,11 +44,6 @@ templ NotesIndex(displayName string, counts NavCounts, rows []NoteRow) {
 						if len(rows) == 0 {
 							<div style="padding:var(--u4);color:var(--ink-mute);font-family:var(--font-mono);">◇ no notes yet</div>
 						}
-					</div>
-				</section>
-				<section class="reader">
-					<div style="padding:var(--u5);color:var(--ink-mute);font-family:var(--font-mono);">
-						◇ select or create a note
 					</div>
 				</section>
 			}

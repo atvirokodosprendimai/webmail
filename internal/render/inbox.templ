@@ -41,7 +41,7 @@ type InboxRow struct {
 // Inbox renders the full inbox page.
 templ Inbox(displayName string, counts NavCounts, rows []InboxRow) {
 	@Base("ORBITAL // inbox") {
-		<main class="shell">
+		<main class="shell shell--list">
 			@Shell("inbox", counts, displayName) {
 				<section class="list">
 					<header class="list__head">
@@ -61,11 +61,6 @@ templ Inbox(displayName string, counts NavCounts, rows []InboxRow) {
 								◇ no transmissions
 							</div>
 						}
-					</div>
-				</section>
-				<section class="reader">
-					<div style="padding: var(--u5); color: var(--ink-mute); font-family: var(--font-mono); font-size: var(--size-sm);">
-						◇ select a transmission
 					</div>
 				</section>
 			}

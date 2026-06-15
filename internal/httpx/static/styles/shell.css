@@ -12,7 +12,8 @@
 
 .shell.shell--compose,
 .shell.shell--read,
-.shell.shell--settings {
+.shell.shell--settings,
+.shell.shell--list {
   grid-template-columns: var(--rail-w) var(--nav-w) 1fr;
 }
 
