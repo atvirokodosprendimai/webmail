@@ -22,17 +22,19 @@ templ InboxStub(displayName, email, role string) {
 	}
 }
 
-// InboxRow is the projection used by the inbox list view.
+// InboxRow is the projection used by the inbox list view. One row per
+// thread (latest message), with ThreadCount when count > 1.
 type InboxRow struct {
-	IngestID  string
-	Subject   string
-	FromName  string
-	FromAddr  string
-	Snippet   string
-	ReceivedAt time.Time
-	Seen      bool
-	Flagged   bool
-	HasAttach bool
+	IngestID    string
+	Subject     string
+	FromName    string
+	FromAddr    string
+	Snippet     string
+	ReceivedAt  time.Time
+	Seen        bool
+	Flagged     bool
+	HasAttach   bool
+	ThreadCount int
 }
 
 // Inbox renders the full inbox page.
@@ -91,6 +93,9 @@ templ InboxRowItem(r InboxRow) {
 			</div>
 			<div class="row__subject" style={ optionalWeight(r.Seen) }>
 				{ r.Subject }
+				if r.ThreadCount > 1 {
+					<span class="chip chip--plasma" style="margin-left:var(--u);">{ pad2(r.ThreadCount) }</span>
+				}
 				if r.Flagged {
 					<span class="chip chip--solar" style="margin-left:var(--u);">★</span>
 				}

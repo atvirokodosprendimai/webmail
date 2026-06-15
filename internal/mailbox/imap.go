@@ -228,6 +228,14 @@ func (i *imapClient) selectFolder(name string) (SelectInfo, error) {
 // UID strictly greater than since. Returns ALL envelopes in one batch —
 // callers cannot issue another IMAP command while this stream is
 // in-flight (single client = single command at a time).
+// refsHeaderSection asks for just the References header (envelope only
+// carries In-Reply-To; References is fetched separately).
+var refsHeaderSection = &imap.FetchItemBodySection{
+	Peek:         true,
+	Specifier:    imap.PartSpecifierHeader,
+	HeaderFields: []string{"References"},
+}
+
 func (i *imapClient) fetchEnvelopesSince(since uint32) ([]FetchedEnvelope, error) {
 	if since == ^uint32(0) {
 		return nil, errors.New("imap: refusing to fetch with overflow since value")
@@ -239,6 +247,7 @@ func (i *imapClient) fetchEnvelopesSince(since uint32) ([]FetchedEnvelope, error
 		Envelope:      true,
 		InternalDate:  true,
 		BodyStructure: &imap.FetchItemBodyStructure{Extended: true},
+		BodySection:   []*imap.FetchItemBodySection{refsHeaderSection},
 	})
 	out := []FetchedEnvelope{}
 	for {
@@ -256,6 +265,38 @@ func (i *imapClient) fetchEnvelopesSince(since uint32) ([]FetchedEnvelope, error
 		return nil, fmt.Errorf("imap fetch close: %w", err)
 	}
 	return out, nil
+}
+
+// parseReferencesHeader pulls the `References:` value out of a raw
+// header blob (e.g. "References: <a@x> <b@y>\r\n") and returns the
+// joined message-IDs. Empty when the header is absent.
+func parseReferencesHeader(raw []byte) string {
+	if len(raw) == 0 {
+		return ""
+	}
+	s := string(raw)
+	const prefix = "References:"
+	idx := strings.Index(s, prefix)
+	if idx < 0 {
+		return ""
+	}
+	rest := s[idx+len(prefix):]
+	// Stop at the next header line (CRLF + non-whitespace) — folded
+	// continuation lines (CRLF + space/tab) belong to References.
+	end := len(rest)
+	for i := 0; i+1 < len(rest); i++ {
+		if rest[i] == '\n' && i+1 < len(rest) && rest[i+1] != ' ' && rest[i+1] != '\t' {
+			end = i
+			break
+		}
+	}
+	val := strings.TrimSpace(rest[:end])
+	// Collapse CRLF folding to a single space.
+	val = strings.ReplaceAll(val, "\r\n ", " ")
+	val = strings.ReplaceAll(val, "\r\n\t", " ")
+	val = strings.ReplaceAll(val, "\n ", " ")
+	val = strings.ReplaceAll(val, "\n\t", " ")
+	return val
 }
 
 // fetchFlagsAll returns the current (UID, Flags) mapping for every
@@ -654,6 +695,9 @@ func envelopeFromBuffer(buf *imapclient.FetchMessageBuffer) FetchedEnvelope {
 		env.Attachments = walkAttachmentParts(buf.BodyStructure)
 		env.TextPath, env.IsTextPlain = findTextPartPath(buf.BodyStructure)
 		env.TextEncoding, env.TextCharset = textPartCodec(buf.BodyStructure, env.TextPath)
+	}
+	if refs := buf.FindBodySection(refsHeaderSection); refs != nil {
+		env.References = parseReferencesHeader(refs)
 	}
 	for _, f := range buf.Flags {
 		switch f {

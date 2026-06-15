@@ -90,70 +90,60 @@ func (a *App) folderView(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *App) fetchRowsForRole(ctx context.Context, role string, limit int) ([]render.InboxRow, error) {
-	var rows []struct {
-		ID         string
-		Subject    string
-		FromName   string
-		FromAddr   string
-		BodyText   string
-		ReceivedAt time.Time
-		Seen       bool
-		Flagged    bool
-		HasAttach  bool
-	}
-	err := a.DB.WithContext(ctx).
-		Table("mailbox_ingest AS m").
-		Select("m.id, m.subject, m.from_name, m.from_addr, m.body_text, m.received_at, m.seen, m.flagged, EXISTS (SELECT 1 FROM mailbox_attachment a WHERE a.ingest_id = m.id) AS has_attach").
-		Joins("INNER JOIN mailbox_folder f ON f.id = m.folder_id").
-		Where("f.role = ?", role).
-		Order("m.received_at DESC").
-		Limit(limit).
-		Scan(&rows).Error
-	if err != nil {
-		return nil, err
-	}
-	out := make([]render.InboxRow, 0, len(rows))
-	for _, r := range rows {
-		snip := r.BodyText
-		if len(snip) > 140 {
-			snip = snip[:140] + "…"
-		}
-		snip = strings.ReplaceAll(snip, "\n", " ")
-		out = append(out, render.InboxRow{
-			IngestID:   r.ID,
-			Subject:    mailbox.DecodeHeader(r.Subject),
-			FromName:   mailbox.DecodeHeader(r.FromName),
-			FromAddr:   r.FromAddr,
-			Snippet:    snip,
-			ReceivedAt: r.ReceivedAt,
-			Seen:       r.Seen,
-			Flagged:    r.Flagged,
-			HasAttach:  r.HasAttach,
-		})
-	}
-	return out, nil
+	return a.fetchThreadedRows(ctx, role, limit)
 }
 
 func (a *App) fetchInboxRows(ctx context.Context, limit int) ([]render.InboxRow, error) {
+	return a.fetchThreadedRows(ctx, mailbox.FolderRoleInbox, limit)
+}
+
+// fetchThreadedRows groups by thread_id, picks the latest message per
+// thread, computes per-thread count + OR'd flagged + attach indicators
+// across the whole thread (so an old flag still shows on the
+// representative row).
+func (a *App) fetchThreadedRows(ctx context.Context, role string, limit int) ([]render.InboxRow, error) {
 	var rows []struct {
-		ID         string
-		Subject    string
-		FromName   string
-		FromAddr   string
-		BodyText   string
-		ReceivedAt time.Time
-		Seen       bool
-		Flagged    bool
-		HasAttach  bool
+		ID          string
+		Subject     string
+		FromName    string
+		FromAddr    string
+		BodyText    string
+		ReceivedAt  time.Time
+		Seen        bool
+		Flagged     bool
+		HasAttach   bool
+		ThreadID    string
+		ThreadCount int
 	}
-	err := a.DB.WithContext(ctx).
-		Table("mailbox_ingest AS m").
-		Select("m.id, m.subject, m.from_name, m.from_addr, m.body_text, m.received_at, m.seen, m.flagged, EXISTS (SELECT 1 FROM mailbox_attachment a WHERE a.ingest_id = m.id) AS has_attach").
-		Joins("INNER JOIN mailbox_folder f ON f.id = m.folder_id").
-		Where("f.role = ?", mailbox.FolderRoleInbox).
-		Order("m.received_at DESC").
-		Limit(limit).
-		Scan(&rows).Error
+	// SQLite trick: pick MAX(received_at) per thread, join back to get
+	// the corresponding row. EXISTS subqueries fold flagged/attach
+	// across the full thread.
+	err := a.DB.WithContext(ctx).Raw(`
+SELECT
+  m.id, m.subject, m.from_name, m.from_addr, m.body_text,
+  m.received_at, m.seen, m.flagged, m.thread_id,
+  EXISTS (
+    SELECT 1 FROM mailbox_attachment a
+    INNER JOIN mailbox_ingest mi ON mi.id = a.ingest_id
+    WHERE mi.thread_id = m.thread_id
+  ) AS has_attach,
+  (
+    SELECT COUNT(*) FROM mailbox_ingest mc
+    INNER JOIN mailbox_folder fc ON fc.id = mc.folder_id
+    WHERE mc.thread_id = m.thread_id
+  ) AS thread_count
+FROM mailbox_ingest m
+INNER JOIN mailbox_folder f ON f.id = m.folder_id
+INNER JOIN (
+  SELECT mx.thread_id, MAX(mx.received_at) AS latest
+  FROM mailbox_ingest mx
+  INNER JOIN mailbox_folder fx ON fx.id = mx.folder_id
+  WHERE fx.role = ?
+  GROUP BY mx.thread_id
+) t ON t.thread_id = m.thread_id AND t.latest = m.received_at
+WHERE f.role = ?
+ORDER BY m.received_at DESC
+LIMIT ?`, role, role, limit).Scan(&rows).Error
 	if err != nil {
 		return nil, err
 	}
@@ -165,15 +155,16 @@ func (a *App) fetchInboxRows(ctx context.Context, limit int) ([]render.InboxRow,
 		}
 		snip = strings.ReplaceAll(snip, "\n", " ")
 		out = append(out, render.InboxRow{
-			IngestID:   r.ID,
-			Subject:    mailbox.DecodeHeader(r.Subject),
-			FromName:   mailbox.DecodeHeader(r.FromName),
-			FromAddr:   r.FromAddr,
-			Snippet:    snip,
-			ReceivedAt: r.ReceivedAt,
-			Seen:       r.Seen,
-			Flagged:    r.Flagged,
-			HasAttach:  r.HasAttach,
+			IngestID:    r.ID,
+			Subject:     mailbox.DecodeHeader(r.Subject),
+			FromName:    mailbox.DecodeHeader(r.FromName),
+			FromAddr:    r.FromAddr,
+			Snippet:     snip,
+			ReceivedAt:  r.ReceivedAt,
+			Seen:        r.Seen,
+			Flagged:     r.Flagged,
+			HasAttach:   r.HasAttach,
+			ThreadCount: r.ThreadCount,
 		})
 	}
 	return out, nil
