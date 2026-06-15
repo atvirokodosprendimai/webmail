@@ -676,12 +676,14 @@ func (a *App) noteCreate(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	if err := a.MailboxSvc.AppendMessage(r.Context(), a.Cfg.IMAPNotesFolder, raw, nil); err != nil {
+	uid, err := a.MailboxSvc.AppendMessageUID(r.Context(), a.Cfg.IMAPNotesFolder, raw, nil, mid)
+	if err != nil {
 		http.Error(w, "append: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 	n := notes.Note{
 		MessageID: mid,
+		UID:       uid,
 		AuthorID:  u.ID,
 		Title:     title,
 		BodyMD:    body,
@@ -745,13 +747,17 @@ func (a *App) noteSave(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	if err := a.MailboxSvc.EditNoteAppendExpunge(r.Context(), a.Cfg.IMAPNotesFolder, old.UID, raw); err != nil {
-		http.Error(w, "edit: "+err.Error(), http.StatusInternalServerError)
-		return
+	newUID, eerr := a.MailboxSvc.EditNoteAppendExpunge(r.Context(), a.Cfg.IMAPNotesFolder, old.UID, old.MessageID, raw, mid)
+	if eerr != nil {
+		// EXPUNGE failed (e.g. old UID unrecoverable) — log and
+		// continue so the new version is still saved locally. Stale
+		// IMAP copy is filtered out by superseded_by below.
+		slog.Warn("note edit append-expunge", "err", eerr, "old_mid", old.MessageID)
 	}
 	_ = a.NotesRepo.MarkSuperseded(r.Context(), old.MessageID, mid)
 	_ = a.NotesRepo.Upsert(r.Context(), notes.Note{
 		MessageID: mid,
+		UID:       newUID,
 		AuthorID:  u.ID,
 		Title:     title,
 		BodyMD:    body,

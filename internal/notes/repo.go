@@ -15,8 +15,11 @@ type Repo struct{ db *gorm.DB }
 
 func NewRepo(db *gorm.DB) *Repo { return &Repo{db: db} }
 
-// Upsert by MessageID. version handling and SupersededBy stamping
-// happens at the sync layer; this is a dumb store.
+// Upsert by MessageID. The caller is responsible for SupersededBy
+// stamping — this code path INCLUDES superseded_by in the update list,
+// so handlers (which know the edit chain) can use Upsert. Poll-driven
+// sync from IMAP must use UpsertContent instead so it doesn't blow
+// away the handler-set superseded_by.
 func (r *Repo) Upsert(ctx context.Context, n Note) error {
 	if n.ID == "" {
 		n.ID = uuid.NewString()
@@ -34,6 +37,42 @@ func (r *Repo) Upsert(ctx context.Context, n Note) error {
 			"uid", "title", "body_md", "body_html", "pinned", "tags", "superseded_by", "updated_at",
 		}),
 	}).Create(&n).Error
+}
+
+// UpsertContent is the poll-loop variant: it does NOT include
+// superseded_by in the update column list. That column is owned by
+// edit handlers (which know the old→new chain). Otherwise the next
+// poll cycle would re-upsert an old IMAP message and reset its
+// superseded_by to "", bringing the dead row back to life.
+func (r *Repo) UpsertContent(ctx context.Context, n Note) error {
+	if n.ID == "" {
+		n.ID = uuid.NewString()
+	}
+	if n.CreatedAt.IsZero() {
+		n.CreatedAt = time.Now().UTC()
+	}
+	n.UpdatedAt = time.Now().UTC()
+	if n.BodyMD != "" && n.BodyHTML == "" {
+		n.BodyHTML = renderMarkdown(n.BodyMD)
+	}
+	return r.db.WithContext(ctx).Clauses(clause.OnConflict{
+		Columns: []clause.Column{{Name: "message_id"}},
+		DoUpdates: clause.AssignmentColumns([]string{
+			"uid", "title", "body_md", "body_html", "pinned", "tags", "updated_at",
+		}),
+	}).Create(&n).Error
+}
+
+// SetUID updates the UID column for a note row identified by
+// MessageID. Used after APPEND when the server returns APPENDUID so
+// we can later EXPUNGE the right message during edit.
+func (r *Repo) SetUID(ctx context.Context, messageID string, uid uint32) error {
+	if messageID == "" {
+		return nil
+	}
+	return r.db.WithContext(ctx).Model(&Note{}).
+		Where("message_id = ?", messageID).
+		Update("uid", uid).Error
 }
 
 func (r *Repo) FindByID(ctx context.Context, id string) (Note, error) {

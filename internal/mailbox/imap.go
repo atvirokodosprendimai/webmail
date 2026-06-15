@@ -493,39 +493,67 @@ func (i *imapClient) expungeUID(uid uint32) error {
 // On TRYCREATE (folder doesn't exist), creates the folder and retries
 // once. Lets the user APPEND to Notes / Sent / Archive / Trash on a
 // fresh account without manual mailbox setup.
-func (i *imapClient) appendMessage(folder string, raw []byte, flags []imap.Flag) error {
-	err := i.appendMessageRaw(folder, raw, flags)
+// appendMessage returns the UID the server assigned (if it advertised
+// UIDPLUS / APPENDUID). 0 = unknown — callers should treat 0 as a hint
+// to look up the UID by Message-ID via SEARCH if they need it.
+func (i *imapClient) appendMessage(folder string, raw []byte, flags []imap.Flag) (uint32, error) {
+	uid, err := i.appendMessageRaw(folder, raw, flags)
 	if err == nil {
-		return nil
+		return uid, nil
 	}
 	if !strings.Contains(err.Error(), "TRYCREATE") && !strings.Contains(strings.ToLower(err.Error()), "doesn't exist") {
-		return err
+		return 0, err
 	}
 	if cerr := i.createMailbox(folder); cerr != nil {
-		return fmt.Errorf("%w (also: %v)", err, cerr)
+		return 0, fmt.Errorf("%w (also: %v)", err, cerr)
 	}
-	// SUBSCRIBE the freshly-created mailbox so Roundcube et al. see it
-	// without a manual "show all folders" toggle.
 	_ = i.subscribeMailbox(folder)
 	return i.appendMessageRaw(folder, raw, flags)
 }
 
-func (i *imapClient) appendMessageRaw(folder string, raw []byte, flags []imap.Flag) error {
+func (i *imapClient) appendMessageRaw(folder string, raw []byte, flags []imap.Flag) (uint32, error) {
 	opts := &imap.AppendOptions{
 		Time:  time.Now().UTC(),
 		Flags: flags,
 	}
 	cmd := i.c.Append(folder, int64(len(raw)), opts)
 	if _, err := cmd.Write(raw); err != nil {
-		return fmt.Errorf("imap append write: %w", err)
+		return 0, fmt.Errorf("imap append write: %w", err)
 	}
 	if err := cmd.Close(); err != nil {
-		return fmt.Errorf("imap append close: %w", err)
+		return 0, fmt.Errorf("imap append close: %w", err)
 	}
-	if _, err := cmd.Wait(); err != nil {
-		return fmt.Errorf("imap append wait: %w", err)
+	data, err := cmd.Wait()
+	if err != nil {
+		return 0, fmt.Errorf("imap append wait: %w", err)
 	}
-	return nil
+	if data != nil {
+		return uint32(data.UID), nil
+	}
+	return 0, nil
+}
+
+// searchByMessageID returns the UID matching a Message-ID in the
+// currently SELECTed folder. Used as fallback when APPENDUID is not
+// advertised so we can still EXPUNGE the right message during edit.
+func (i *imapClient) searchByMessageID(messageID string) (uint32, error) {
+	// IMAP HEADER search keys want the value WITHOUT angle brackets.
+	mid := strings.TrimPrefix(strings.TrimSuffix(strings.TrimSpace(messageID), ">"), "<")
+	cmd := i.c.UIDSearch(&imap.SearchCriteria{
+		Header: []imap.SearchCriteriaHeaderField{{Key: "Message-Id", Value: mid}},
+	}, nil)
+	data, err := cmd.Wait()
+	if err != nil {
+		return 0, fmt.Errorf("imap search by mid: %w", err)
+	}
+	if data == nil {
+		return 0, nil
+	}
+	nums := data.AllUIDs()
+	if len(nums) == 0 {
+		return 0, nil
+	}
+	return uint32(nums[len(nums)-1]), nil
 }
 
 // createMailbox issues IMAP CREATE for the named folder. Used by
