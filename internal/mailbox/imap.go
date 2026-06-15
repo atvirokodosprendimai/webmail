@@ -425,7 +425,25 @@ func (i *imapClient) expungeUID(uid uint32) error {
 //   - notes layer for create/edit (Notes folder).
 //
 // Flags can be set at append time — pass nil for none.
+//
+// On TRYCREATE (folder doesn't exist), creates the folder and retries
+// once. Lets the user APPEND to Notes / Sent / Archive / Trash on a
+// fresh account without manual mailbox setup.
 func (i *imapClient) appendMessage(folder string, raw []byte, flags []imap.Flag) error {
+	err := i.appendMessageRaw(folder, raw, flags)
+	if err == nil {
+		return nil
+	}
+	if !strings.Contains(err.Error(), "TRYCREATE") && !strings.Contains(strings.ToLower(err.Error()), "doesn't exist") {
+		return err
+	}
+	if cerr := i.createMailbox(folder); cerr != nil {
+		return fmt.Errorf("%w (also: %v)", err, cerr)
+	}
+	return i.appendMessageRaw(folder, raw, flags)
+}
+
+func (i *imapClient) appendMessageRaw(folder string, raw []byte, flags []imap.Flag) error {
 	opts := &imap.AppendOptions{
 		Time:  time.Now().UTC(),
 		Flags: flags,
@@ -439,6 +457,16 @@ func (i *imapClient) appendMessage(folder string, raw []byte, flags []imap.Flag)
 	}
 	if _, err := cmd.Wait(); err != nil {
 		return fmt.Errorf("imap append wait: %w", err)
+	}
+	return nil
+}
+
+// createMailbox issues IMAP CREATE for the named folder. Used by
+// appendMessage's TRYCREATE retry and by EnsureFolder.
+func (i *imapClient) createMailbox(name string) error {
+	cmd := i.c.Create(name, nil)
+	if err := cmd.Wait(); err != nil {
+		return fmt.Errorf("imap create %q: %w", name, err)
 	}
 	return nil
 }
