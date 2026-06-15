@@ -35,6 +35,11 @@ func BuildNoteMessage(authorEmail, authorName, title, bodyMD, originalMID string
 	}
 	fmt.Fprintf(&buf, "MIME-Version: 1.0\r\n")
 	fmt.Fprintf(&buf, "Content-Type: %s\r\n", ContentTypeMD)
+	// Content-Disposition: inline is the explicit hint to clients
+	// (Roundcube especially) that this body is to be rendered, not
+	// downloaded. text/plain + inline is the same shape every plain
+	// email uses.
+	fmt.Fprintf(&buf, "Content-Disposition: inline\r\n")
 	fmt.Fprintf(&buf, "Content-Transfer-Encoding: quoted-printable\r\n")
 	fmt.Fprintf(&buf, "\r\n")
 	w := quotedprintable.NewWriter(&buf)

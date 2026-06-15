@@ -171,12 +171,24 @@ func (w *PollWorker) scanFolder(ctx context.Context, c *imapClient, fi folderInf
 		}
 	}
 
-	// Skip body fetch when we're already at the head of the folder.
-	if folder.LastUID >= info.UIDNext-1 && info.UIDNext > 0 {
+	// Notes folder is always fully re-scanned each cycle. The folder is
+	// small (typically tens to a few hundred notes), the Upsert in the
+	// sink is idempotent on message_id, and a full scan picks up:
+	//   - notes created by other IMAP clients (Roundcube etc.)
+	//   - edits made server-side (X-Webmail-Note-Original-MID chains)
+	//   - notes the cursor accidentally skipped past on earlier
+	//     versions when the routing wasn't wired
+	// Other folders keep the UIDVALIDITY / last_uid cursor for cheap
+	// incremental scans.
+	since := folder.LastUID
+	if w.isNotesFolder(fi.Name) {
+		since = 0
+	} else if folder.LastUID >= info.UIDNext-1 && info.UIDNext > 0 {
+		// Skip body fetch when we're already at the head of the folder.
 		return 0, nil
 	}
 
-	envs, err := c.fetchEnvelopesSince(folder.LastUID)
+	envs, err := c.fetchEnvelopesSince(since)
 	if err != nil {
 		return 0, err
 	}
