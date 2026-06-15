@@ -1,0 +1,52 @@
+# ORBITAL webmail — docker compose recipe.
+#
+# Usage:
+#   1. Copy .env.example -> .env and fill in IMAP / SMTP credentials.
+#   2. Generate a session key:
+#        openssl rand -hex 32 | xargs -I{} sed -i '' "s/dev-only-change-me-32-bytes-min!!/{}/" .env
+#   3. docker compose up -d
+#   4. Create the first user (one-shot container against the same image):
+#        docker compose run --rm webmail ./webmail user add you@example.com "Your Name" --admin
+#   5. Open http://localhost:8080/
+#
+# Volumes:
+#   ./data        -> /data        sqlite DB + uploads CAS (NEVER touch this from host)
+#
+# Persistence:
+#   The image holds no state. Everything mutable lives under /data on the
+#   mounted host volume. Snapshot with `cp -r ./data ./data.bak` while the
+#   container is stopped, or use `docker compose stop` + tar + restart.
+
+services:
+  webmail:
+    image: ghcr.io/atvirokodosprendimai/webmail:latest
+    container_name: webmail
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      # Override the in-container DB + upload paths so they land on the
+      # mounted volume. Keeping these explicit means the host layout
+      # is independent of the image's defaults.
+      WEBMAIL_DB_PATH: /data/webmail.db
+      WEBMAIL_UPLOADS_DIR: /data/uploads
+      WEBMAIL_LISTEN: ":8080"
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./data:/data
+    healthcheck:
+      # distroless/static has no shell or wget — the binary itself
+      # answers `healthcheck` by hitting /healthz internally.
+      test: ["CMD", "/app/webmail", "healthcheck"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    # Read-only root FS — every mutation goes to /data via the volume.
+    # tmp is needed by the runtime for atomic uploads CAS writes.
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true

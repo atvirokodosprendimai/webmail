@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -28,17 +29,53 @@ import (
 )
 
 func main() {
-	if len(os.Args) > 1 && os.Args[1] == "user" {
-		if err := runUserCLI(os.Args[2:]); err != nil {
-			slog.Error("user cli", "err", err)
-			os.Exit(1)
+	if len(os.Args) > 1 {
+		switch os.Args[1] {
+		case "user":
+			if err := runUserCLI(os.Args[2:]); err != nil {
+				slog.Error("user cli", "err", err)
+				os.Exit(1)
+			}
+			return
+		case "healthcheck":
+			if err := runHealthcheck(os.Args[2:]); err != nil {
+				_, _ = os.Stderr.WriteString(err.Error() + "\n")
+				os.Exit(1)
+			}
+			return
 		}
-		return
 	}
 	if err := runServer(); err != nil {
 		slog.Error("server", "err", err)
 		os.Exit(1)
 	}
+}
+
+// runHealthcheck hits /healthz on localhost and exits 0 on 200, non-zero
+// otherwise. Used by docker compose healthcheck — distroless/static
+// has no wget/curl, so the binary itself answers.
+func runHealthcheck(args []string) error {
+	url := "http://127.0.0.1:8080/healthz"
+	if v := os.Getenv("WEBMAIL_LISTEN"); v != "" {
+		port := v
+		if i := strings.LastIndex(v, ":"); i >= 0 {
+			port = v[i:]
+		}
+		url = "http://127.0.0.1" + port + "/healthz"
+	}
+	if len(args) > 0 {
+		url = args[0]
+	}
+	client := &http.Client{Timeout: 3 * time.Second}
+	resp, err := client.Get(url)
+	if err != nil {
+		return fmt.Errorf("healthcheck: %w", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("healthcheck: status %d", resp.StatusCode)
+	}
+	return nil
 }
 
 func runServer() error {
