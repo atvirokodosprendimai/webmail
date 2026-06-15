@@ -726,6 +726,8 @@ func envelopeFromBuffer(buf *imapclient.FetchMessageBuffer) FetchedEnvelope {
 			env.Draft = true
 		case imap.FlagDeleted:
 			env.Deleted = true
+		default:
+			env.Keywords = append(env.Keywords, string(f))
 		}
 	}
 	return env

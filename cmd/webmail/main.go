@@ -152,6 +152,8 @@ func runServer() error {
 		Repo:          mailboxRepo,
 		Bus:           bus,
 		Log:           log,
+		NotesFolder:   cfg.IMAPNotesFolder,
+		NotesSink:     notes.NewSink(notesRepo),
 	}
 	if cfg.IMAPHost != "" && cfg.IMAPUsername != "" && cfg.IMAPPassword != "" {
 		// Ensure all configured destination folders exist on the IMAP

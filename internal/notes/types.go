@@ -10,10 +10,17 @@ const (
 	HeaderNoteVersion = "X-Webmail-Note-Version"
 	HeaderNoteOrigMID = "X-Webmail-Note-Original-MID"
 
-	KeywordPinned   = "$Pinned"
-	KeywordTagPfx   = "$note_"
-	NoteVersionV1   = "v1"
-	ContentTypeMD   = "text/markdown; charset=utf-8"
+	KeywordPinned = "$Pinned"
+	KeywordTagPfx = "$note_"
+	NoteVersionV1 = "v1"
+
+	// ContentTypeMD is the Content-Type we set on note messages.
+	// Despite being markdown, we send text/plain so third-party IMAP
+	// clients (Roundcube, Apple Mail, K-9) render the body inline
+	// instead of treating it as a download-only attachment. The
+	// content is still markdown; our webmail renders it via goldmark
+	// from the cached BodyHTML.
+	ContentTypeMD = "text/plain; charset=utf-8"
 )
 
 type Note struct {

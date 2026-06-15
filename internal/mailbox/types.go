@@ -153,6 +153,11 @@ type FetchedEnvelope struct {
 	Answered bool
 	Draft    bool
 	Deleted  bool
+
+	// Keywords is every non-system flag — custom keywords like
+	// $Pinned, $note_inbox, $Label1, etc. Used by the notes sink to
+	// detect Pinned + custom tags.
+	Keywords []string
 }
 
 // ParsedPart describes one attachment part discovered in BODYSTRUCTURE.
