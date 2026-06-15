@@ -1,10 +1,15 @@
-data/
-bin/
-tmp/
+# Anchored to repo root with leading slash so we don't accidentally
+# ignore namesake directories deeper in the tree (e.g. internal/uploads/).
+/data/
+/bin/
+/tmp/
+/forumchat/
+
+# Credentials and editor swap files.
 .env
 .env.local
+.env*.sw[a-p]
+
+# Local sqlite artefacts.
 *.db
 *.db-journal
-uploads/
-forumchat/
-.env*.sw[a-p]
