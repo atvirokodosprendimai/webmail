@@ -154,6 +154,18 @@ func runServer() error {
 		Log:           log,
 	}
 	if cfg.IMAPHost != "" && cfg.IMAPUsername != "" && cfg.IMAPPassword != "" {
+		// Ensure all configured destination folders exist on the IMAP
+		// server, so third-party clients (Roundcube, Apple Mail, etc.)
+		// see Notes / Sent / Trash / Archive even before the user
+		// creates their first note or sends their first message.
+		if err := mailboxSvc.EnsureFolders(ctx, []string{
+			cfg.IMAPNotesFolder,
+			cfg.IMAPSentFolder,
+			cfg.IMAPTrashFolder,
+			cfg.IMAPArchiveFolder,
+		}); err != nil {
+			log.Warn("ensure folders failed (non-fatal)", "err", err)
+		}
 		poll.Start(ctx)
 	} else {
 		log.Warn("IMAP not fully configured — poll worker disabled")
