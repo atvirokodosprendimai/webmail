@@ -8,6 +8,29 @@ import (
 	"time"
 )
 
+// hasKeyword returns true when the named keyword is present in the
+// FetchedEnvelope.Keywords list. Case-sensitive per RFC 3501.
+func hasKeyword(keywords []string, keyword string) bool {
+	for _, k := range keywords {
+		if k == keyword {
+			return true
+		}
+	}
+	return false
+}
+
+// notesTagsFromKeywords collects every $note_<slug> keyword and returns
+// them space-joined (matches our Note.Tags storage).
+func notesTagsFromKeywords(keywords []string) string {
+	var tags []string
+	for _, k := range keywords {
+		if strings.HasPrefix(k, "$note_") {
+			tags = append(tags, strings.TrimPrefix(k, "$note_"))
+		}
+	}
+	return strings.Join(tags, " ")
+}
+
 // PollWorker dials the configured shared IMAP mailbox on a ticker,
 // walks every folder, and ingests new messages. Foreground actions
 // (open, flag, move) use the Service directly with a fresh short-lived
@@ -20,7 +43,32 @@ type PollWorker struct {
 	Repo           *Repo
 	Bus            *Bus
 	Log            *slog.Logger
-	cycleCount     int
+	// NotesFolder, when matched, routes scanned messages into the
+	// notes table instead of mailbox_ingest. Lets users create notes
+	// from any IMAP client and have them appear in /notes.
+	NotesFolder string
+	NotesSink   NotesSink
+	cycleCount  int
+}
+
+// NotesSink is the minimal contract poll.go uses to hand a parsed
+// note off to the notes package. Lets us avoid an import cycle with
+// internal/notes.
+type NotesSink interface {
+	UpsertFromIMAP(ctx context.Context, in NoteUpsert) error
+}
+
+// NoteUpsert is the shape the poll loop hands to the notes sink for
+// every message in IMAP_NOTES_FOLDER.
+type NoteUpsert struct {
+	MessageID    string
+	UID          uint32
+	Title        string
+	BodyMD       string
+	Pinned       bool
+	Tags         string
+	OriginalMID  string
+	UpdatedAt    time.Time
 }
 
 func (w *PollWorker) Start(ctx context.Context) {
@@ -95,6 +143,12 @@ func (w *PollWorker) cycle(ctx context.Context) {
 	}
 }
 
+// isNotesFolder returns true when the named folder is the configured
+// IMAP_NOTES_FOLDER and a notes sink is wired.
+func (w *PollWorker) isNotesFolder(name string) bool {
+	return w.NotesFolder != "" && w.NotesSink != nil && name == w.NotesFolder
+}
+
 func (w *PollWorker) scanFolder(ctx context.Context, c *imapClient, fi folderInfo, doFlagSync bool) (int, error) {
 	info, err := c.examineReadOnly(fi.Name)
 	if err != nil {
@@ -139,12 +193,43 @@ func (w *PollWorker) scanFolder(ctx context.Context, c *imapClient, fi folderInf
 			}
 		}
 	}
+	notesPath := w.isNotesFolder(fi.Name)
 	for _, e := range envs {
 		if ctx.Err() != nil {
 			break
 		}
 		if e.UID > maxUID {
 			maxUID = e.UID
+		}
+
+		// Notes-folder routing: parse body, upsert into notes table,
+		// do NOT touch mailbox_ingest. Keeps the inbox view clean.
+		if notesPath {
+			body := ""
+			if len(e.TextPath) > 0 {
+				raw, err := c.fetchPartPeek(e.UID, e.TextPath)
+				if err == nil {
+					body = strings.TrimSpace(decodeTextBody(raw, e.TextEncoding, e.TextCharset))
+				}
+			}
+			err := w.NotesSink.UpsertFromIMAP(ctx, NoteUpsert{
+				MessageID:   e.MessageID,
+				UID:         e.UID,
+				Title:       DecodeHeader(e.Subject),
+				BodyMD:      body,
+				Pinned:      hasKeyword(e.Keywords, "$Pinned"),
+				Tags:        notesTagsFromKeywords(e.Keywords),
+				OriginalMID: "",
+				UpdatedAt:   e.InternalDate,
+			})
+			if err != nil {
+				w.Log.Warn("mailbox: notes upsert", "uid", e.UID, "err", err)
+				saveCursor()
+				continue
+			}
+			inserted++
+			saveCursor()
+			continue
 		}
 
 		bodyText, bodyHTML := "", ""
