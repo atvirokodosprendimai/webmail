@@ -2,10 +2,8 @@ package notes
 
 import (
 	"context"
+	"fmt"
 	"strings"
-
-	"github.com/google/uuid"
-	"gorm.io/gorm"
 
 	"github.com/atvirokodosprendimai/webmail/internal/mailbox"
 )
@@ -28,9 +26,15 @@ func (s *Sink) UpsertFromIMAP(ctx context.Context, in mailbox.NoteUpsert) error 
 	if title == "" {
 		title = "(untitled)"
 	}
+	// Some IMAP clients APPEND without a Message-ID header. Fabricate
+	// a stable synthetic ID anchored on UID so rows stay distinct.
+	msgID := strings.TrimSpace(in.MessageID)
+	if msgID == "" {
+		msgID = fmt.Sprintf("<no-mid-uid-%d@orbital.local>", in.UID)
+	}
 	bodyMD := in.BodyMD
 	n := Note{
-		MessageID:    in.MessageID,
+		MessageID:    msgID,
 		UID:          in.UID,
 		Title:        title,
 		BodyMD:       bodyMD,
@@ -45,15 +49,15 @@ func (s *Sink) UpsertFromIMAP(ctx context.Context, in mailbox.NoteUpsert) error 
 	if err := s.Repo.UpsertContent(ctx, n); err != nil {
 		return err
 	}
-	// If the message carries X-Webmail-Note-Original-MID, mark every
-	// older note in the chain superseded by THIS message-id.
-	if in.OriginalMID != "" && in.OriginalMID != in.MessageID {
-		_ = s.Repo.MarkSuperseded(ctx, in.OriginalMID, in.MessageID)
+	if in.OriginalMID != "" && in.OriginalMID != msgID {
+		_ = s.Repo.MarkSuperseded(ctx, in.OriginalMID, msgID)
 	}
 	return nil
 }
 
-// Avoid unused-import deadcode by referencing uuid + gorm so this file
-// continues to compile if future helpers need them.
-var _ = uuid.New
-var _ = (*gorm.DB)(nil)
+// PurgeStale deletes local rows whose MID is not in keep. IMAP is the
+// source of truth; anything missing from the server (EXPUNGE'd by us,
+// Roundcube-deleted, etc.) gets cleaned up.
+func (s *Sink) PurgeStale(ctx context.Context, keep []string) (int, error) {
+	return s.Repo.DeleteByMessageIDsNotIn(ctx, keep)
+}
