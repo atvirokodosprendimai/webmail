@@ -1,6 +1,6 @@
 ---
 tldr: Add a "bookmark this thread for later" feature. Two flavours — personal ("I'll reply later") and shared ("team should look at this"). Same Message-ID-keyed shape as projects; distinct surface in UI (button in thread view + /bookmarks page + nav entry).
-status: active
+status: completed
 ---
 
 # Plan: bookmark emails for later reply
@@ -25,7 +25,7 @@ status: active
 
 ## Phases
 
-### Phase 1 - Schema + repo - status: open
+### Phase 1 - Schema + repo - status: completed
 
 1. [ ] goose migration `00010_bookmarks.sql` — `bookmarks(id PK, message_id NOT NULL, item_kind, user_id NULL, note, created_by NOT NULL, created_at NOT NULL)` + unique index on `(coalesce(user_id, ''), message_id)` so the same thread can be both personally bookmarked AND team-shared, but not double-bookmarked at the same scope.
    - `user_id NULL` = team-shared bookmark
@@ -38,7 +38,7 @@ status: active
    - `ListShared(ctx)` — `WHERE user_id IS NULL`, newest first.
    - `IsBookmarked(ctx, messageID, userID) (personal bool, shared bool)` — used by the thread view to render correct button labels.
 
-### Phase 2 - Thread view UI + tag flow - status: open
+### Phase 2 - Thread view UI + tag flow - status: completed
 
 1. [ ] `internal/render/thread.templ` — under the existing "+ tag into project" `<details>`, add a "+ bookmark for later" section with two buttons: "Bookmark (personal)" + "Bookmark (team)", plus an optional `<input name="note">`.
    - Show the current bookmark state inline ("⭐ personal bookmark" / "👥 team bookmark") with a "remove" form.
@@ -49,7 +49,7 @@ status: active
 3. [ ] Update thread handler to compute `personalSet`, `sharedSet`, `bookmarkRows` for the current thread and pass into the templ.
    - => Phase 2 result: open any thread → click "Bookmark (personal)" → state chip appears + persists across reload.
 
-### Phase 3 - /bookmarks page + nav entry - status: open
+### Phase 3 - /bookmarks page + nav entry - status: completed
 
 1. [ ] `internal/render/bookmarks.templ` — list page styled like inbox (uses Shell + `.list` block). Two sections: "Mine" (personal) and "Team" (shared). Each row = subject + from + when, links to `/thread/{first ingest id with that message_id}`.
 2. [ ] `internal/httpx/handlers.go` — `bookmarksIndex` handler: query personal + shared bookmarks for current user, join to `mailbox_ingest` on `message_id` (folder-agnostic per design), project to list rows with subject decoded via `mailbox.DecodeHeader`.
@@ -57,13 +57,13 @@ status: active
 4. [ ] Route `/bookmarks` in `internal/httpx/server.go`, gated behind `RequireUser`.
    - => Phase 3 result: nav link visible → click → see your personal bookmarks + team bookmarks → click a row → opens the thread.
 
-### Phase 4 - Inbox row badge - status: open
+### Phase 4 - Inbox row badge - status: completed
 
 1. [ ] Extend the inbox/folder list query to include `is_bookmarked_personal` + `is_bookmarked_shared` via EXISTS subqueries scoped by `thread_id` (so a bookmark on any message in the thread surfaces on the inbox row).
 2. [ ] `InboxRow` struct gains two bool fields; `inbox.templ` shows a small `🔖` chip when set.
    - => Phase 4 result: bookmarked threads visually stand out in the inbox without opening them.
 
-### Phase 5 - Polish + plan close-out - status: open
+### Phase 5 - Polish + plan close-out - status: completed
 
 1. [ ] Update SPEC.md to v0.4 with a one-paragraph "Bookmarks" section under §UI surfaces + a row in the route table.
 2. [ ] Update CI grep gate check — no new IMAP calls in this feature (bookmarks are pure DB), so the gate just needs to keep passing.
@@ -88,3 +88,5 @@ status: active
 ## Progress Log
 
 - 2606152018 — Plan created. User-confirmed scope: per-user + shared variants both available, no reminder/due-date, add via thread-view button.
+- 2606152025 — All 5 phases shipped in one push. Schema (00010_bookmarks.sql) + bookmarks/{types,repo}.go + thread.templ bookmark section + bookmarks.templ page + rail+nav entries + bookmarkAdd/Remove/Index handlers + viewerKey ctx for the inbox bookmarked-badge subquery. Smoke test: migration 00010 applies cleanly, /bookmarks 303→/login gate works. CI grep gate clean (no IMAP touched).
+- 2606152025 — Side-fix during phase: long thread reply button was off-screen (no scroll). Added `min-height:0; overflow-y:auto` to .nav/.list/.reader in shell.css so each shell column scrolls independently.

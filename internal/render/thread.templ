@@ -29,8 +29,16 @@ type ProjectOption struct {
 	Name string
 }
 
+// BookmarkState surfaces whether the current thread is bookmarked
+// personally (PersonalID set) and/or team-shared (SharedID set).
+// Empty IDs mean "not bookmarked at that scope".
+type BookmarkState struct {
+	PersonalID string
+	SharedID   string
+}
+
 // Thread page renders one full thread of messages plus actions.
-templ Thread(displayName string, counts NavCounts, subject string, msgs []ThreadMessage, projects []ProjectOption, tagged []string) {
+templ Thread(displayName string, counts NavCounts, subject string, msgs []ThreadMessage, projects []ProjectOption, tagged []string, bookmark BookmarkState) {
 	@Base("ORBITAL // " + subject) {
 		<main class="shell">
 			@Shell("inbox", counts, displayName) {
@@ -64,6 +72,9 @@ templ Thread(displayName string, counts NavCounts, subject string, msgs []Thread
 							</div>
 						}
 					</details>
+					if len(msgs) > 0 {
+						@threadBookmark(msgs[0].IngestID, bookmark)
+					}
 					for _, m := range msgs {
 						@threadMessage(m)
 					}
@@ -80,6 +91,44 @@ templ Thread(displayName string, counts NavCounts, subject string, msgs []Thread
 			}
 		</main>
 	}
+}
+
+templ threadBookmark(ingestID string, b BookmarkState) {
+	<details class="reader__tag" open>
+		<summary class="mono" style="cursor:pointer;">🔖 bookmark for later</summary>
+		<div style="display:flex;flex-direction:column;gap:var(--u);margin-top:var(--u2);">
+			if b.PersonalID == "" {
+				<form method="post" action={ templ.URL("/thread/" + ingestID + "/bookmark") }>
+					<input type="hidden" name="scope" value="personal"/>
+					<input type="text" name="note" placeholder="optional note (visible only to you)" class="input"/>
+					<button class="btn btn--sm btn--primary" type="submit" style="margin-top:var(--u);">+ Bookmark (personal)</button>
+				</form>
+			} else {
+				<div style="display:flex;align-items:center;gap:var(--u);">
+					<span class="chip chip--plasma">⭐ personal bookmark</span>
+					<form method="post" action={ templ.URL("/bookmark/" + b.PersonalID + "/remove") } style="display:inline;">
+						<input type="hidden" name="back" value={ "/thread/" + ingestID }/>
+						<button class="btn btn--sm btn--ghost" type="submit">remove</button>
+					</form>
+				</div>
+			}
+			if b.SharedID == "" {
+				<form method="post" action={ templ.URL("/thread/" + ingestID + "/bookmark") }>
+					<input type="hidden" name="scope" value="shared"/>
+					<input type="text" name="note" placeholder="optional note (visible to team)" class="input"/>
+					<button class="btn btn--sm" type="submit" style="margin-top:var(--u);">+ Bookmark (team)</button>
+				</form>
+			} else {
+				<div style="display:flex;align-items:center;gap:var(--u);">
+					<span class="chip chip--violet">👥 team bookmark</span>
+					<form method="post" action={ templ.URL("/bookmark/" + b.SharedID + "/remove") } style="display:inline;">
+						<input type="hidden" name="back" value={ "/thread/" + ingestID }/>
+						<button class="btn btn--sm btn--ghost" type="submit">remove</button>
+					</form>
+				</div>
+			}
+		</div>
+	</details>
 }
 
 templ threadActions(m ThreadMessage) {

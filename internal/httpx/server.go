@@ -61,6 +61,10 @@ func New(a *App) http.Handler {
 		r.Post("/projects", a.projectsCreate)
 		r.Get("/p/{slug}", a.projectPage)
 
+		r.Get("/bookmarks", a.bookmarksIndex)
+		r.Post("/thread/{id}/bookmark", a.bookmarkAdd)
+		r.Post("/bookmark/{id}/remove", a.bookmarkRemove)
+
 		r.Get("/attach/{id}", a.attachDownload)
 
 		r.Get("/notes", a.notesIndex)

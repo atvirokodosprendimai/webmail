@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/atvirokodosprendimai/webmail/internal/auth"
+	"github.com/atvirokodosprendimai/webmail/internal/bookmarks"
 	"github.com/atvirokodosprendimai/webmail/internal/config"
 	"github.com/atvirokodosprendimai/webmail/internal/db"
 	"github.com/atvirokodosprendimai/webmail/internal/httpx"
@@ -76,23 +77,25 @@ func runServer() error {
 
 	projectsRepo := projects.NewRepo(gdb)
 	notesRepo := notes.NewRepo(gdb)
+	bookmarksRepo := bookmarks.NewRepo(gdb)
 	uploadStore := &uploads.Store{Root: cfg.UploadsDir}
 	if err := uploadStore.EnsureRoot(); err != nil {
 		return err
 	}
 
 	app := &httpx.App{
-		Cfg:          cfg,
-		DB:           gdb,
-		AuthRepo:     authRepo,
-		AuthHandler:  authHandler,
-		Sessions:     sess,
-		MailboxRepo:  mailboxRepo,
-		MailboxSvc:   mailboxSvc,
-		Bus:          bus,
-		ProjectsRepo: projectsRepo,
-		NotesRepo:    notesRepo,
-		Uploads:      uploadStore,
+		Cfg:           cfg,
+		DB:            gdb,
+		AuthRepo:      authRepo,
+		AuthHandler:   authHandler,
+		Sessions:      sess,
+		MailboxRepo:   mailboxRepo,
+		MailboxSvc:    mailboxSvc,
+		Bus:           bus,
+		ProjectsRepo:  projectsRepo,
+		NotesRepo:     notesRepo,
+		BookmarksRepo: bookmarksRepo,
+		Uploads:       uploadStore,
 	}
 
 	srv := &http.Server{

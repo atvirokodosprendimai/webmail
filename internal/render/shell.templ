@@ -24,6 +24,9 @@ templ Shell(activeFolder string, counts NavCounts, displayName string) {
 		<a href="/projects" class={ "rail__item", templ.KV("is-active", activeFolder == "projects") } title="Projects">
 			<svg class="icn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
 		</a>
+		<a href="/bookmarks" class={ "rail__item", templ.KV("is-active", activeFolder == "bookmarks") } title="Bookmarks">
+			<svg class="icn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+		</a>
 		<div class="rail__spacer"></div>
 		<a href="/settings" class={ "rail__item", templ.KV("is-active", activeFolder == "settings") } title="Settings">
 			<svg class="icn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="3"/></svg>
@@ -67,6 +70,7 @@ templ Shell(activeFolder string, counts NavCounts, displayName string) {
 		<div class="nav__section">workspace</div>
 		<ul class="nav__list">
 			<li><a href="/projects" class={ "nav__link", templ.KV("is-active", activeFolder == "projects") }><span>Projects</span></a></li>
+			<li><a href="/bookmarks" class={ "nav__link", templ.KV("is-active", activeFolder == "bookmarks") }><span>Bookmarks</span></a></li>
 			<li><a href="/notes" class={ "nav__link", templ.KV("is-active", activeFolder == "notes") }><span>Notes</span></a></li>
 		</ul>
 		<div class="nav__footer">

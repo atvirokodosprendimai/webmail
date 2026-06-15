@@ -14,3 +14,4 @@
 - 2026-06-15 `4510169` ui: logout button in shell rail (replaces missing entry from real shell)
 - 2026-06-15 `77e28c8` fix(threading): group inbox by thread + fetch References header
 - 2026-06-15 `c4fbe20` plan: bookmark emails for later reply
+- 2026-06-15 `93d12c2` fix(reply): wrap msg-id with <>; pre-fill reply with quoted history

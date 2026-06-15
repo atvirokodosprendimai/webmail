@@ -22,6 +22,18 @@
   overflow-y: auto;
 }
 
+/* Every shell column scrolls independently — long threads, long
+   inbox lists, long settings pages all stay self-contained instead
+   of pushing the reply button off-screen. min-height: 0 is the
+   essential CSS-grid trick that lets a grid child shrink below its
+   content size and start scrolling. */
+.shell .nav,
+.shell .list,
+.shell .reader {
+  min-height: 0;
+  overflow-y: auto;
+}
+
 /* ============ RAIL (far left) ============ */
 .rail {
   background: var(--void);

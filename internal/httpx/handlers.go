@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/atvirokodosprendimai/webmail/internal/auth"
+	"github.com/atvirokodosprendimai/webmail/internal/bookmarks"
 	"github.com/atvirokodosprendimai/webmail/internal/config"
 	"github.com/atvirokodosprendimai/webmail/internal/mailbox"
 	"github.com/atvirokodosprendimai/webmail/internal/notes"
@@ -33,9 +34,10 @@ type App struct {
 	MailboxRepo  *mailbox.Repo
 	MailboxSvc   *mailbox.Service
 	Bus          *mailbox.Bus
-	ProjectsRepo *projects.Repo
-	NotesRepo    *notes.Repo
-	Uploads      *uploads.Store
+	ProjectsRepo  *projects.Repo
+	NotesRepo     *notes.Repo
+	BookmarksRepo *bookmarks.Repo
+	Uploads       *uploads.Store
 }
 
 // --- inbox / thread ---
@@ -55,9 +57,12 @@ func (a *App) navCounts(ctx context.Context) render.NavCounts {
 	return render.NavCounts{InboxUnread: int(unread), InboxTotal: int(total)}
 }
 
+type viewerKey struct{}
+
 func (a *App) inbox(w http.ResponseWriter, r *http.Request) {
 	u := auth.CurrentUser(r)
-	rows, err := a.fetchInboxRows(r.Context(), 50)
+	ctx := context.WithValue(r.Context(), viewerKey{}, u.ID)
+	rows, err := a.fetchInboxRows(ctx, 50)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -80,7 +85,8 @@ func (a *App) folderView(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 		return
 	}
-	rows, err := a.fetchRowsForRole(r.Context(), role, 100)
+	ctx := context.WithValue(r.Context(), viewerKey{}, u.ID)
+	rows, err := a.fetchRowsForRole(ctx, role, 100)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -102,6 +108,11 @@ func (a *App) fetchInboxRows(ctx context.Context, limit int) ([]render.InboxRow,
 // across the whole thread (so an old flag still shows on the
 // representative row).
 func (a *App) fetchThreadedRows(ctx context.Context, role string, limit int) ([]render.InboxRow, error) {
+	// Read viewer user_id off the auth-loaded ctx (passed in via the
+	// goroutine-local mechanism would be heavier than reading the row).
+	// Bookmarked column fires when ANY bookmark for THIS user OR a
+	// shared bookmark targets ANY message_id in the thread.
+	viewerID, _ := ctx.Value(viewerKey{}).(string)
 	var rows []struct {
 		ID          string
 		Subject     string
@@ -112,6 +123,7 @@ func (a *App) fetchThreadedRows(ctx context.Context, role string, limit int) ([]
 		Seen        bool
 		Flagged     bool
 		HasAttach   bool
+		Bookmarked  bool
 		ThreadID    string
 		ThreadCount int
 	}
@@ -127,6 +139,11 @@ SELECT
     INNER JOIN mailbox_ingest mi ON mi.id = a.ingest_id
     WHERE mi.thread_id = m.thread_id
   ) AS has_attach,
+  EXISTS (
+    SELECT 1 FROM bookmarks bk
+    INNER JOIN mailbox_ingest mb ON mb.message_id = bk.message_id
+    WHERE mb.thread_id = m.thread_id AND (bk.user_id = ? OR bk.user_id = '')
+  ) AS bookmarked,
   (
     SELECT COUNT(*) FROM mailbox_ingest mc
     INNER JOIN mailbox_folder fc ON fc.id = mc.folder_id
@@ -143,7 +160,7 @@ INNER JOIN (
 ) t ON t.thread_id = m.thread_id AND t.latest = m.received_at
 WHERE f.role = ?
 ORDER BY m.received_at DESC
-LIMIT ?`, role, role, limit).Scan(&rows).Error
+LIMIT ?`, viewerID, role, role, limit).Scan(&rows).Error
 	if err != nil {
 		return nil, err
 	}
@@ -164,6 +181,7 @@ LIMIT ?`, role, role, limit).Scan(&rows).Error
 			Seen:        r.Seen,
 			Flagged:     r.Flagged,
 			HasAttach:   r.HasAttach,
+			Bookmarked:  r.Bookmarked,
 			ThreadCount: r.ThreadCount,
 		})
 	}
@@ -271,8 +289,22 @@ func (a *App) thread(w http.ResponseWriter, r *http.Request) {
 	if len(msgs) > 0 && msgs[0].Subject != "" {
 		subject = mailbox.DecodeHeader(msgs[0].Subject)
 	}
+	// Bookmark state for the thread (any message_id in the thread counts).
+	var threadMIDs []string
+	for _, m := range thread {
+		threadMIDs = append(threadMIDs, m.MessageID)
+	}
+	bookState := render.BookmarkState{}
+	if personal, shared, err := a.BookmarksRepo.FindForThread(r.Context(), u.ID, threadMIDs); err == nil {
+		if len(personal) > 0 {
+			bookState.PersonalID = personal[0].ID
+		}
+		if len(shared) > 0 {
+			bookState.SharedID = shared[0].ID
+		}
+	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	_ = render.Thread(u.DisplayName, a.navCounts(r.Context()), subject, msgs, opts, tagged).Render(r.Context(), w)
+	_ = render.Thread(u.DisplayName, a.navCounts(r.Context()), subject, msgs, opts, tagged, bookState).Render(r.Context(), w)
 }
 
 func (a *App) threadSeen(w http.ResponseWriter, r *http.Request) {
@@ -748,6 +780,80 @@ func (a *App) settings(w http.ResponseWriter, r *http.Request) {
 		SMTPHost: a.Cfg.SMTPHost, SMTPPort: a.Cfg.SMTPPort, SMTPUser: a.Cfg.SMTPUsername, SMTPTLS: a.Cfg.SMTPTLS,
 		NotesFolder: a.Cfg.IMAPNotesFolder,
 	}).Render(r.Context(), w)
+}
+
+// --- bookmarks ---
+
+func (a *App) bookmarkAdd(w http.ResponseWriter, r *http.Request) {
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "bad form", http.StatusBadRequest)
+		return
+	}
+	u := auth.CurrentUser(r)
+	id := chi.URLParam(r, "id")
+	ing, err := a.MailboxRepo.FindIngest(r.Context(), id)
+	if err != nil {
+		http.Error(w, "not found", http.StatusNotFound)
+		return
+	}
+	scope := r.FormValue("scope")
+	userID := u.ID
+	if scope == "shared" {
+		userID = bookmarks.SharedUserID
+	}
+	if _, err := a.BookmarksRepo.Add(r.Context(), ing.MessageID, bookmarks.KindEmail, userID, r.FormValue("note"), u.ID); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	http.Redirect(w, r, "/thread/"+id, http.StatusSeeOther)
+}
+
+func (a *App) bookmarkRemove(w http.ResponseWriter, r *http.Request) {
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "bad form", http.StatusBadRequest)
+		return
+	}
+	id := chi.URLParam(r, "id")
+	if err := a.BookmarksRepo.Remove(r.Context(), id); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	back := r.FormValue("back")
+	if back == "" {
+		back = "/bookmarks"
+	}
+	http.Redirect(w, r, back, http.StatusSeeOther)
+}
+
+func (a *App) bookmarksIndex(w http.ResponseWriter, r *http.Request) {
+	u := auth.CurrentUser(r)
+	personal, _ := a.BookmarksRepo.ListPersonal(r.Context(), u.ID)
+	shared, _ := a.BookmarksRepo.ListShared(r.Context())
+	mine := a.bookmarksToRows(r.Context(), personal)
+	team := a.bookmarksToRows(r.Context(), shared)
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	_ = render.Bookmarks(u.DisplayName, a.navCounts(r.Context()), mine, team).Render(r.Context(), w)
+}
+
+func (a *App) bookmarksToRows(ctx context.Context, bs []bookmarks.Bookmark) []render.BookmarkRow {
+	out := make([]render.BookmarkRow, 0, len(bs))
+	for _, b := range bs {
+		ing, err := a.MailboxRepo.FindIngestByMessageID(ctx, b.MessageID)
+		if err != nil {
+			continue
+		}
+		out = append(out, render.BookmarkRow{
+			ID:         b.ID,
+			IngestID:   ing.ID,
+			Subject:    mailbox.DecodeHeader(ing.Subject),
+			FromName:   mailbox.DecodeHeader(ing.FromName),
+			FromAddr:   ing.FromAddr,
+			Note:       b.Note,
+			ReceivedAt: ing.ReceivedAt,
+			CreatedAt:  b.CreatedAt,
+		})
+	}
+	return out
 }
 
 var _ = strconv.Itoa

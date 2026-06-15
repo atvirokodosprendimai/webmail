@@ -34,6 +34,7 @@ type InboxRow struct {
 	Seen        bool
 	Flagged     bool
 	HasAttach   bool
+	Bookmarked  bool
 	ThreadCount int
 }
 
@@ -101,6 +102,9 @@ templ InboxRowItem(r InboxRow) {
 				}
 				if r.HasAttach {
 					<span class="chip chip--ghost" style="margin-left:var(--u);">📎</span>
+				}
+				if r.Bookmarked {
+					<span class="chip chip--violet" style="margin-left:var(--u);">🔖</span>
 				}
 			</div>
 			<div class="row__snippet">{ r.Snippet }</div>
