@@ -32,10 +32,19 @@ migrate-down:
 ci-imap-gate:
 	./scripts/check-imap-wrapper.sh
 
+# clean removes BUILD ARTIFACTS ONLY. Never touches data/ or .env —
+# the database holds users, projects, bookmarks, poll cursors and the
+# uploads CAS; .env holds credentials. Both are gitignored so any
+# deletion is unrecoverable.
 clean:
-	rm -rf bin/ data/webmail.db
-# NOTE: clean targets MUST NEVER touch .env — user credentials live there
-# and the file is gitignored so deletion is unrecoverable.
+	rm -rf bin/
+
+# reset-db is the DESTRUCTIVE counterpart. Requires explicit RESET=yes
+# so it can't be triggered by mistake. Drops the sqlite db AND every
+# materialised attachment in uploads/.
+reset-db:
+	@[ "$(RESET)" = "yes" ] || { echo "refusing: pass RESET=yes to confirm"; exit 1; }
+	rm -rf data/webmail.db data/uploads
 
 # Smoke-test that boots the binary on an isolated DB without touching
 # the user's data/ or .env. Always use this for local boot tests.
