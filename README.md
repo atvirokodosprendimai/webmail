@@ -10,13 +10,14 @@
 
 ## Why another webmail client?
 
-Most webmail clients stop at *read* and *reply*. ORBITAL extends them with three coupled features that turn an inbox into a tiny knowledge base:
+Most webmail clients stop at *read* and *reply*. ORBITAL extends them with **four coupled features** that turn an inbox into a tiny knowledge base:
 
 1. **Projects** — tag a thread into a project. Every body and every attachment is materialised from IMAP into a local content-addressed archive keyed by **RFC 2822 Message-ID**. Server-side folder moves do not break the link.
 2. **Bookmarks** — mark a thread for *later* with a personal **or** team-shared scope. Personal = "I'll reply tonight." Team = "Everyone should see this." No reminder needed at v1, just a clean list.
 3. **Notes** — Apple-Notes-style markdown notepad **whose backing store is a dedicated IMAP folder** (`Notes` by default). Every note is one RFC 2822 message APPEND'd with a `X-Webmail-Note: v1` header. Open Apple Mail, Thunderbird, or your iPhone client and you see the notes there too — server-side sync, off-site backup, multi-device — all for free. Edits = APPEND new + EXPUNGE old (IMAP has no UPDATE; this is the protocol-correct shape).
+4. **Issues** — promote any thread into a tracked issue with a clear title, multiple assignees, open/closed state, and internal markdown notes only visible to your team. The email thread itself stays the conversation surface — internal notes are the "between us" context that never goes over SMTP. Monotonic `#N` numbers per install. One issue per thread (idempotent).
 
-Everything sits on one Go binary, one SQLite file, an embedded CSS bundle, and your IMAP credentials. No Electron, no Node, no SaaS account.
+All four are **pointer-only** decorations: they reference the email thread by RFC 2822 Message-ID, so a server-side folder move never breaks the link. Everything sits on one Go binary, one SQLite file, an embedded CSS bundle, and your IMAP credentials. No Electron, no Node, no SaaS account.
 
 ---
 
@@ -49,6 +50,17 @@ Everything sits on one Go binary, one SQLite file, an embedded CSS bundle, and y
 - `/bookmarks` page split into "Mine" and "Team" sections.
 - 🔖 chip on bookmarked threads in inbox view, surfaced via SQL `EXISTS` subquery over the thread's message-ids.
 - Idempotent UPSERT — clicking "Bookmark" twice doesn't create duplicates.
+
+### Issues
+
+- **Promote any thread** with one click ("Convert to issue" in the thread view).
+- **Title + multiple assignees** picked from local users; assigned-to-me filter on the list.
+- **States: open / closed** — no transition workflow, just toggle.
+- **Two conversation surfaces**: the email thread for customer-facing replies, plus internal markdown notes on the issue row that NEVER leave your DB.
+- **Monotonic `#N` numbers** allocated via a singleton counter table — race-free under concurrent creation.
+- **One issue per thread** — UNIQUE on `message_id`. Clicking "Convert to issue" on an already-promoted thread redirects to the existing one.
+- **Thread banner** — once promoted, the thread page shows a chip linking to `/issues/{id}` so you always see status + open the issue.
+- Independent from projects (a thread can be tagged into a project AND promoted to an issue; the two systems don't share state).
 
 ### Notes (IMAP-backed markdown notepad)
 
@@ -258,6 +270,7 @@ internal/
     smtp.go                        -- DialTLS/STARTTLS + auth
   projects/                        -- Project + Item gorm + tag flow
   bookmarks/                       -- Bookmark gorm + Add/Remove/List
+  issues/                          -- Issue + Assignee + Counter; CreateFromThread
   notes/                           -- BuildNoteMessage + goldmark render
   uploads/                         -- CAS blobstore (sha256)
   render/                          -- templ pages + components
@@ -312,6 +325,16 @@ Yes. The auth model is *one shared mailbox, many local webmail logins*. Each use
 
 Yes. We use `glebarez/sqlite` (a pure-Go port of `modernc.org/sqlite`) under `gorm.io/driver/sqlite`. `CGO_ENABLED=0 go build` produces a single static binary that runs on `distroless/static`.
 
+### What's the difference between a project, a bookmark, and an issue?
+
+All three are pointer-only decorations on top of an email thread. Pick by intent:
+
+- **Project** = a *bucket* of related threads + materialised attachments. Long-lived, shared, with a description. Good for "everything about the Acme Corp launch".
+- **Bookmark** = a *note-to-self or note-to-team* for later. No state, no metadata, just "remember this". Personal or shared scope.
+- **Issue** = a *tracked task* with title, assignees, and open/closed state. Use when "who's doing this?" matters and you want to know when it's done.
+
+A thread can be all three at once — they're independent.
+
 ### Where do my notes go?
 
 Into your IMAP server, in `IMAP_NOTES_FOLDER` (default `Notes`). One note = one email-shaped message with a `X-Webmail-Note: v1` header. You can read them from any IMAP client; if you delete ORBITAL entirely, the notes survive in your mailbox.
@@ -352,7 +375,7 @@ For proprietary integration or different terms, contact the maintainers — dual
 
 If you arrived here looking for any of these — yes, ORBITAL is what you want:
 
-> Self-hosted webmail. Open-source webmail client written in Go. IMAP web client. SMTP send. Markdown notes in IMAP folder. Apple Notes alternative on IMAP. Shared team inbox webmail. Multi-user webmail single mailbox. Webmail with projects. Webmail with bookmarks. Reply later webmail. Save email for later. Save email to project. Materialise attachments. Content-addressed attachment store. RFC 2047 encoded-word decoder. Lithuanian / Polish / German email charset support. Datastar webmail. templ webmail. Pure-Go SQLite webmail. CGO-free webmail. Single binary webmail. Distroless docker webmail. Goose migrations webmail. scs sessions webmail. RFC 6851 MOVE fallback webmail. UIDVALIDITY tracking webmail. Per-folder cursor poll webmail. RFC 2822 Message-ID threading. Folder-move resilient project tagging. Edit-as-APPEND-EXPUNGE notes. X-Webmail-Note custom header. $Pinned IMAP keyword. $note_ custom keyword. bluemonday sanitiser HTML email rendering. goldmark markdown notes. CI grep gate IMAP wrapper. Read-only EXAMINE vs read-write SELECT. BODY.PEEK silent ingest. Per-message cursor save crash-safe poll. Flag mirror reconciliation. mime.WordDecoder iso-8859-2 windows-1257 charset chain. go-message/charset reader. RFC 5322 Address quoting. envelope MAIL FROM SMTP_USERNAME. APPEND TRYCREATE auto-create. RFC 4315 UIDPLUS expunge. IMAP gorm sqlite glebarez. Linux webmail. macOS webmail. ARM webmail. Raspberry Pi webmail. Homelab webmail. NixOS webmail. Privacy-focused webmail self-hosted. No tracker no analytics no JavaScript framework webmail. Static binary deployment webmail.
+> Self-hosted webmail. Open-source webmail client written in Go. IMAP web client. SMTP send. Markdown notes in IMAP folder. Apple Notes alternative on IMAP. Shared team inbox webmail. Multi-user webmail single mailbox. Webmail with projects. Webmail with bookmarks. Webmail with issue tracker. Email to issue. GitHub Issues alternative for email teams. Self-hosted issue tracker. Per-thread issue tracker. Issue tracker with multiple assignees. Open close issue lifecycle. Internal notes on issues. Reply later webmail. Save email for later. Save email to project. Materialise attachments. Content-addressed attachment store. RFC 2047 encoded-word decoder. Lithuanian / Polish / German email charset support. Datastar webmail. templ webmail. Pure-Go SQLite webmail. CGO-free webmail. Single binary webmail. Distroless docker webmail. Goose migrations webmail. scs sessions webmail. RFC 6851 MOVE fallback webmail. UIDVALIDITY tracking webmail. Per-folder cursor poll webmail. RFC 2822 Message-ID threading. Folder-move resilient project tagging. Edit-as-APPEND-EXPUNGE notes. X-Webmail-Note custom header. $Pinned IMAP keyword. $note_ custom keyword. bluemonday sanitiser HTML email rendering. goldmark markdown notes. CI grep gate IMAP wrapper. Read-only EXAMINE vs read-write SELECT. BODY.PEEK silent ingest. Per-message cursor save crash-safe poll. Flag mirror reconciliation. mime.WordDecoder iso-8859-2 windows-1257 charset chain. go-message/charset reader. RFC 5322 Address quoting. envelope MAIL FROM SMTP_USERNAME. APPEND TRYCREATE auto-create. RFC 4315 UIDPLUS expunge. IMAP gorm sqlite glebarez. Linux webmail. macOS webmail. ARM webmail. Raspberry Pi webmail. Homelab webmail. NixOS webmail. Privacy-focused webmail self-hosted. No tracker no analytics no JavaScript framework webmail. Static binary deployment webmail.
 
 That paragraph is for the search engines, not for you. Skip it if you got here from a real link.
 
