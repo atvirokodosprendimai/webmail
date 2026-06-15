@@ -55,10 +55,14 @@ func BuildMessage(cmd Command) (string, []byte, error) {
 		hdr.Set("Reply-To", cmd.ReplyTo)
 	}
 	if cmd.InReplyTo != "" {
-		hdr.Set("In-Reply-To", cmd.InReplyTo)
+		hdr.Set("In-Reply-To", wrapMsgID(cmd.InReplyTo))
 	}
 	if len(cmd.Refs) > 0 {
-		hdr.Set("References", strings.Join(cmd.Refs, " "))
+		refs := make([]string, 0, len(cmd.Refs))
+		for _, r := range cmd.Refs {
+			refs = append(refs, wrapMsgID(r))
+		}
+		hdr.Set("References", strings.Join(refs, " "))
 	}
 	hdr.Set("MIME-Version", "1.0")
 
@@ -106,4 +110,44 @@ func encodeSubject(s string) string {
 		}
 	}
 	return s
+}
+
+// wrapMsgID ensures a Message-ID is in canonical RFC 5322 form
+// `<localpart@domain>`. go-imap/v2 returns envelope MessageID without
+// the angle brackets; setting `In-Reply-To: foo@bar` instead of
+// `In-Reply-To: <foo@bar>` makes most mail clients refuse to thread
+// the reply. Idempotent on already-wrapped input.
+func wrapMsgID(s string) string {
+	s = strings.TrimSpace(s)
+	if s == "" {
+		return s
+	}
+	if strings.HasPrefix(s, "<") && strings.HasSuffix(s, ">") {
+		return s
+	}
+	return "<" + s + ">"
+}
+
+// QuoteBody returns a reply-style quoted version of the original body.
+// Mirrors what most mail clients do: "On <date>, <name> wrote:" then
+// the body prefixed with "> " line-by-line. Used by the threadReply
+// handler to pre-fill the reply textarea so the recipient sees thread
+// context.
+func QuoteBody(when time.Time, fromDisplay, body string) string {
+	var b strings.Builder
+	b.WriteString("\n\nOn ")
+	b.WriteString(when.Format("Mon, 02 Jan 2006 at 15:04"))
+	b.WriteString(", ")
+	if fromDisplay != "" {
+		b.WriteString(fromDisplay)
+	} else {
+		b.WriteString("they")
+	}
+	b.WriteString(" wrote:\n")
+	for _, line := range strings.Split(strings.TrimRight(body, "\n"), "\n") {
+		b.WriteString("> ")
+		b.WriteString(line)
+		b.WriteString("\n")
+	}
+	return b.String()
 }

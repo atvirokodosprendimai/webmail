@@ -71,7 +71,7 @@ templ Thread(displayName string, counts NavCounts, subject string, msgs []Thread
 						<details class="reader__reply">
 							<summary class="mono">+ reply</summary>
 							<form method="post" action={ templ.URL("/thread/" + msgs[len(msgs)-1].IngestID + "/reply") } style="margin-top:var(--u2);display:flex;flex-direction:column;gap:var(--u2);">
-								<textarea name="body" class="input" rows="6" placeholder="Compose your transmission…" required></textarea>
+								<textarea name="body" class="input" rows="12" placeholder="Compose your transmission…" required>{ replyQuote(msgs[len(msgs)-1]) }</textarea>
 								<button class="btn btn--primary" type="submit">Transmit reply</button>
 							</form>
 						</details>
@@ -174,6 +174,50 @@ func humanBytes(n int64) string {
 	default:
 		return itoa(int(n/(k*k))) + " MB"
 	}
+}
+
+// replyQuote builds the quoted "On <date>, X wrote: > body" block that
+// pre-fills the reply textarea. Mirrors send.QuoteBody but lives here
+// so the templ stays standalone — render layer mustn't import send.
+func replyQuote(m ThreadMessage) string {
+	body := m.BodyText
+	if body == "" {
+		body = "(no text body)"
+	}
+	from := firstNonEmpty(m.FromName, m.FromAddr)
+	var sb [64]byte
+	_ = sb
+	out := "\n\nOn " + m.ReceivedAt.Format("Mon, 02 Jan 2006 at 15:04") + ", "
+	if from != "" {
+		out += from
+	} else {
+		out += "they"
+	}
+	out += " wrote:\n"
+	for _, line := range splitLines(body) {
+		out += "> " + line + "\n"
+	}
+	return out
+}
+
+func splitLines(s string) []string {
+	out := []string{}
+	cur := ""
+	for _, c := range s {
+		if c == '\n' {
+			out = append(out, cur)
+			cur = ""
+			continue
+		}
+		if c == '\r' {
+			continue
+		}
+		cur += string(c)
+	}
+	if cur != "" {
+		out = append(out, cur)
+	}
+	return out
 }
 
 func joinStr(parts []string) string {
