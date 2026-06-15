@@ -312,6 +312,51 @@ func (s *Service) EditNoteAppendExpunge(ctx context.Context, notesFolder string,
 	return c.expungeUID(oldUID)
 }
 
+// EnsureFolders creates the named IMAP folders if they don't already
+// exist. Called at boot for IMAP_NOTES_FOLDER / IMAP_SENT_FOLDER /
+// IMAP_TRASH_FOLDER / IMAP_ARCHIVE_FOLDER so they show up in third-
+// party clients (Roundcube, Apple Mail, Thunderbird) even before the
+// user creates their first note / sends their first reply / archives
+// their first thread. Idempotent — already-existing folders are
+// skipped silently.
+func (s *Service) EnsureFolders(ctx context.Context, names []string) error {
+	if len(names) == 0 {
+		return nil
+	}
+	c, err := dial(s.Cfg)
+	if err != nil {
+		return err
+	}
+	defer c.close()
+	existing, err := c.listFolders()
+	if err != nil {
+		return err
+	}
+	have := map[string]bool{}
+	for _, fi := range existing {
+		have[fi.Name] = true
+	}
+	for _, name := range names {
+		if name == "" {
+			continue
+		}
+		if !have[name] {
+			if cerr := c.createMailbox(name); cerr != nil {
+				s.Log.Warn("mailbox: ensure folder create", "folder", name, "err", cerr)
+				continue
+			}
+			s.Log.Info("mailbox: created folder", "folder", name)
+		}
+		// Always SUBSCRIBE — needed for Roundcube and similar clients
+		// that hide unsubscribed folders by default. Idempotent on
+		// already-subscribed mailboxes per RFC 3501.
+		if serr := c.subscribeMailbox(name); serr != nil {
+			s.Log.Warn("mailbox: subscribe folder", "folder", name, "err", serr)
+		}
+	}
+	return nil
+}
+
 // KeywordSet sets/removes one IMAP keyword on a message in the given
 // folder. Used for $Pinned + $note_<slug>.
 func (s *Service) KeywordSet(ctx context.Context, folderName string, uid uint32, keyword string, add bool) error {

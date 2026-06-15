@@ -504,6 +504,9 @@ func (i *imapClient) appendMessage(folder string, raw []byte, flags []imap.Flag)
 	if cerr := i.createMailbox(folder); cerr != nil {
 		return fmt.Errorf("%w (also: %v)", err, cerr)
 	}
+	// SUBSCRIBE the freshly-created mailbox so Roundcube et al. see it
+	// without a manual "show all folders" toggle.
+	_ = i.subscribeMailbox(folder)
 	return i.appendMessageRaw(folder, raw, flags)
 }
 
@@ -531,6 +534,18 @@ func (i *imapClient) createMailbox(name string) error {
 	cmd := i.c.Create(name, nil)
 	if err := cmd.Wait(); err != nil {
 		return fmt.Errorf("imap create %q: %w", name, err)
+	}
+	return nil
+}
+
+// subscribeMailbox issues IMAP SUBSCRIBE so the folder shows up in
+// clients that filter their tree by the subscribed list (Roundcube,
+// Apple Mail with "show all folders" off, mutt with mailboxes
+// directive). CREATE alone is not enough on most servers.
+func (i *imapClient) subscribeMailbox(name string) error {
+	cmd := i.c.Subscribe(name)
+	if err := cmd.Wait(); err != nil {
+		return fmt.Errorf("imap subscribe %q: %w", name, err)
 	}
 	return nil
 }
