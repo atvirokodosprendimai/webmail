@@ -125,14 +125,78 @@ go build -o bin/webmail ./cmd/webmail
 
 Open <http://localhost:8080/>. Log in. Wait one poll cycle (60 s by default) for your inbox to populate.
 
-### Docker
+### Docker / docker compose
+
+The recommended deployment is via `compose.yml` against the
+prebuilt image at `ghcr.io/atvirokodosprendimai/webmail:latest`:
 
 ```bash
-docker build -t webmail .
-docker run --rm -p 8080:8080 --env-file .env -v $(pwd)/data:/app/data webmail
+cp .env.example .env
+# (fill in IMAP / SMTP creds + generate a 32-byte session key)
+docker compose up -d
 ```
 
-The image is built on `distroless/static-debian12:nonroot`. CSS, SQL migrations, and the templ output are all `//go:embed`'d into the binary — there is nothing outside `/app/webmail` and the volume-mounted `/app/data`.
+The image is built on `distroless/static-debian12:nonroot`. CSS, SQL
+migrations, and the templ output are all `//go:embed`'d into the
+binary — nothing outside `/app/webmail` and the volume-mounted
+`/data`.
+
+---
+
+## Creating users
+
+There is **no self-signup** — admins seed every user via the CLI.
+
+### Local binary
+
+```bash
+./bin/webmail user add you@example.com "Your Name" --admin
+```
+
+You'll be prompted for a password twice (8+ chars). The flag flags:
+
+- `--admin` — grants admin role (can manage other users in `/settings`).
+  Without it, the role is `member`.
+- Second positional arg is the display name (defaults to the email).
+
+Add a second member:
+
+```bash
+./bin/webmail user add alice@example.com "Alice"
+```
+
+### Docker compose
+
+Run the CLI inside a one-shot container against the same image:
+
+```bash
+docker compose run --rm webmail /app/webmail user add you@example.com "Your Name" --admin
+```
+
+This boots a new container, runs the CLI subcommand against the
+mounted `./data/webmail.db`, then exits. The persistent container
+keeps running.
+
+### Plain docker
+
+```bash
+docker run --rm -it \
+  --env-file .env \
+  -v $(pwd)/data:/data \
+  -e WEBMAIL_DB_PATH=/data/webmail.db \
+  ghcr.io/atvirokodosprendimai/webmail:latest \
+  /app/webmail user add you@example.com "Your Name" --admin
+```
+
+The `-it` flags are required so `term.ReadPassword` can prompt
+on a real tty. The same volume mount is needed so the new user
+lands in the same database the main container uses.
+
+### Listing / removing users
+
+User list and removal are managed from the **/settings** admin
+page once an admin user is signed in. v1 doesn't ship a CLI
+counterpart — the admin UI is the supported surface.
 
 ---
 
