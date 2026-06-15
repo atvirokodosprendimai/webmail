@@ -8,6 +8,8 @@ cd "$ROOT"
 
 hits=$(grep -RnE '\bimapclient\.' internal/ 2>/dev/null \
        | grep -v 'internal/mailbox/imap.go' \
+       | grep -vE ':[[:space:]]*//' \
+       | grep -vE ':[[:space:]]*\*' \
        || true)
 
 if [[ -n "$hits" ]]; then
