@@ -29,6 +29,16 @@ type ProjectOption struct {
 	Name string
 }
 
+// IssueBanner surfaces an existing issue on the thread page when one
+// has been minted for this conversation. Empty IssueID = no banner
+// (and the "Convert to issue" affordance shows instead).
+type IssueBanner struct {
+	IssueID string
+	Number  int
+	Status  string
+	Title   string
+}
+
 // BookmarkState surfaces whether the current thread is bookmarked
 // personally (PersonalID set) and/or team-shared (SharedID set).
 // Empty IDs mean "not bookmarked at that scope".
@@ -38,7 +48,7 @@ type BookmarkState struct {
 }
 
 // Thread page renders one full thread of messages plus actions.
-templ Thread(displayName string, counts NavCounts, subject string, msgs []ThreadMessage, projects []ProjectOption, tagged []string, bookmark BookmarkState) {
+templ Thread(displayName string, counts NavCounts, subject string, msgs []ThreadMessage, projects []ProjectOption, tagged []string, bookmark BookmarkState, issue IssueBanner) {
 	@Base(subject + " — ORBITAL") {
 		<main class="shell shell--read">
 			@Shell("inbox", counts, displayName) {
@@ -73,6 +83,7 @@ templ Thread(displayName string, counts NavCounts, subject string, msgs []Thread
 						}
 					</details>
 					if len(msgs) > 0 {
+						@threadIssue(msgs[0].IngestID, issue)
 						@threadBookmark(msgs[0].IngestID, bookmark)
 					}
 					for _, m := range msgs {
@@ -91,6 +102,28 @@ templ Thread(displayName string, counts NavCounts, subject string, msgs []Thread
 			}
 		</main>
 	}
+}
+
+templ threadIssue(ingestID string, b IssueBanner) {
+	<details class="reader__tag" open>
+		<summary>Issue tracker</summary>
+		<div style="display:flex;align-items:center;gap:var(--u2);margin-top:var(--u3);">
+			if b.IssueID != "" {
+				if b.Status == "closed" {
+					<span class="chip">#{ itoa(b.Number) } closed</span>
+				} else {
+					<span class="chip chip--success">#{ itoa(b.Number) } open</span>
+				}
+				<a class="btn btn--sm" href={ templ.URL("/issues/" + b.IssueID) }>Open #{ itoa(b.Number) } →</a>
+			} else {
+				<form method="post" action="/issues" style="display:flex;gap:var(--u2);align-items:center;flex:1;">
+					<input type="hidden" name="ingest_id" value={ ingestID }/>
+					<input class="input" type="text" name="title" placeholder="Issue title (defaults to subject)" style="flex:1;"/>
+					<button class="btn btn--sm btn--primary" type="submit">Convert to issue</button>
+				</form>
+			}
+		</div>
+	</details>
 }
 
 templ threadBookmark(ingestID string, b BookmarkState) {

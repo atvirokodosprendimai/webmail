@@ -1,0 +1,232 @@
+package render
+
+import "time"
+
+type IssueRow struct {
+	ID         string
+	Number     int
+	Title      string
+	Status     string
+	UpdatedAt  time.Time
+	Assignees  []IssueAssignee
+}
+
+type IssueAssignee struct {
+	UserID      string
+	DisplayName string
+	Email       string
+}
+
+type IssueListFilters struct {
+	Status     string // "open" | "closed" | "all"
+	AssignedMe bool
+	Search     string
+}
+
+templ Issues(displayName string, counts NavCounts, rows []IssueRow, f IssueListFilters) {
+	@Base("Issues — ORBITAL") {
+		<main class="shell shell--list">
+			@Shell("issues", counts, displayName) {
+				<section class="list">
+					<header class="list__head">
+						<div class="list__head-row">
+							<div>
+								<span class="list__title">Issues</span>
+								<span class="list__title-count">{ itoa(len(rows)) }</span>
+							</div>
+						</div>
+						<form method="get" action="/issues" style="margin-top:var(--u3);display:flex;flex-direction:column;gap:var(--u2);">
+							<div class="search">
+								<svg class="search__icn" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" fill="none"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+								<input type="search" name="q" value={ f.Search } placeholder="Search title and notes…" autocomplete="off"/>
+							</div>
+							<div style="display:flex;gap:var(--u);align-items:center;">
+								@issuesFilterPill("Open",   "open",   f.Status == "open" || f.Status == "")
+								@issuesFilterPill("Closed", "closed", f.Status == "closed")
+								@issuesFilterPill("All",    "all",    f.Status == "all")
+								<label style="display:inline-flex;align-items:center;gap:var(--u);font-size:var(--size-xs);color:var(--fg-soft);margin-left:auto;">
+									<input type="checkbox" name="mine" value="1" class="check" checked?={ f.AssignedMe }/>
+									Assigned to me
+								</label>
+							</div>
+							<noscript>
+								<button class="btn btn--sm" type="submit">Apply</button>
+							</noscript>
+						</form>
+					</header>
+					<div class="list__rows">
+						for _, it := range rows {
+							@issueRowItem(it)
+						}
+						if len(rows) == 0 {
+							<div class="empty">No issues.</div>
+						}
+					</div>
+				</section>
+			}
+		</main>
+	}
+}
+
+templ issuesFilterPill(label, status string, active bool) {
+	<a href={ templ.URL("/issues?status=" + status) } class={ "btn", "btn--sm", templ.KV("btn--primary", active) }>
+		{ label }
+	</a>
+}
+
+templ issueRowItem(it IssueRow) {
+	<a href={ templ.URL("/issues/" + it.ID) } class="row">
+		<div class="row__main">
+			<div class="row__subject">
+				<span class="mono mute" style="margin-right:var(--u);">#{ itoa(it.Number) }</span>
+				{ it.Title }
+				if it.Status == "closed" {
+					<span class="chip" style="margin-left:var(--u);">closed</span>
+				} else {
+					<span class="chip chip--success" style="margin-left:var(--u);">open</span>
+				}
+			</div>
+			if len(it.Assignees) > 0 {
+				<div class="row__snippet">
+					{ assigneeList(it.Assignees) }
+				</div>
+			}
+		</div>
+		<div class="row__when">{ it.UpdatedAt.Format("Jan 02") }</div>
+	</a>
+}
+
+func assigneeList(a []IssueAssignee) string {
+	out := ""
+	for i, u := range a {
+		if i > 0 { out += ", " }
+		if u.DisplayName != "" { out += u.DisplayName } else { out += u.Email }
+	}
+	return out
+}
+
+// ---- Detail ----
+
+type IssueDetail struct {
+	ID            string
+	Number        int
+	Title         string
+	NotesMD       string
+	NotesHTML     string
+	Status        string
+	UpdatedAt     time.Time
+	CreatedAt     time.Time
+	ThreadIngestID string // routing target for the email side
+	ThreadSubject string
+	Assignees     []IssueAssignee
+	Candidates    []IssueAssignee // users who can be added
+}
+
+templ IssueShow(displayName string, counts NavCounts, d IssueDetail) {
+	@Base("#" + itoa(d.Number) + " — " + d.Title) {
+		<main class="shell shell--read">
+			@Shell("issues", counts, displayName) {
+				<section class="reader">
+					<header class="reader__head">
+						<div>
+							<div class="reader__eyebrow">
+								Issue #{ itoa(d.Number) } · updated { d.UpdatedAt.Format("Jan 2, 2006 · 15:04") }
+							</div>
+							<h1 class="reader__subject">
+								{ d.Title }
+								if d.Status == "closed" {
+									<span class="chip" style="margin-left:var(--u2);">closed</span>
+								} else {
+									<span class="chip chip--success" style="margin-left:var(--u2);">open</span>
+								}
+							</h1>
+						</div>
+						<div class="reader__actions">
+							<form method="post" action={ templ.URL("/issues/" + d.ID + "/status") } style="display:inline;">
+								<input type="hidden" name="status" value={ statusToggle(d.Status) }/>
+								<button class="btn btn--sm" type="submit">
+									if d.Status == "open" {
+										Close
+									} else {
+										Reopen
+									}
+								</button>
+							</form>
+							if d.ThreadIngestID != "" {
+								<a class="btn btn--sm" href={ templ.URL("/thread/" + d.ThreadIngestID) }>Open email thread →</a>
+							}
+						</div>
+					</header>
+
+					<!-- Title rename + assignees -->
+					<div class="msg">
+						<form method="post" action={ templ.URL("/issues/" + d.ID + "/title") } style="display:flex;gap:var(--u2);margin-bottom:var(--u3);">
+							<input class="input" type="text" name="title" value={ d.Title } required style="flex:1;"/>
+							<button class="btn btn--sm" type="submit">Rename</button>
+						</form>
+						<div class="section-h" style="margin:0 0 var(--u2) 0;">Assignees</div>
+						<div style="display:flex;flex-wrap:wrap;gap:var(--u);align-items:center;">
+							for _, u := range d.Assignees {
+								<span class="chip">
+									{ firstNonEmpty(u.DisplayName, u.Email) }
+									<form method="post" action={ templ.URL("/issues/" + d.ID + "/assignees/" + u.UserID + "/remove") } style="display:inline;margin-left:var(--u);">
+										<button class="recipient__close" type="submit" title="Remove">×</button>
+									</form>
+								</span>
+							}
+							if len(d.Assignees) == 0 {
+								<span class="mute" style="font-size:var(--size-xs);">Unassigned</span>
+							}
+							if len(d.Candidates) > 0 {
+								<form method="post" action={ templ.URL("/issues/" + d.ID + "/assignees") } style="margin-left:var(--u2);display:flex;gap:var(--u);">
+									<select name="user_id" class="input" style="font-size:var(--size-xs);">
+										<option value="">Add someone…</option>
+										for _, u := range d.Candidates {
+											<option value={ u.UserID }>{ firstNonEmpty(u.DisplayName, u.Email) }</option>
+										}
+									</select>
+									<button class="btn btn--sm" type="submit">Add</button>
+								</form>
+							}
+						</div>
+					</div>
+
+					<!-- Thread link -->
+					if d.ThreadIngestID != "" {
+						<div class="msg">
+							<div class="section-h" style="margin:0 0 var(--u2) 0;">Email thread</div>
+							<a href={ templ.URL("/thread/" + d.ThreadIngestID) }>{ d.ThreadSubject }</a>
+						</div>
+					}
+
+					<!-- Internal notes -->
+					<div class="msg">
+						<div class="section-h" style="margin:0 0 var(--u2) 0;">Internal notes</div>
+						<details>
+							<summary class="mono" style="cursor:pointer;font-size:var(--size-xs);color:var(--fg-mute);margin-bottom:var(--u2);">Edit</summary>
+							<form method="post" action={ templ.URL("/issues/" + d.ID + "/notes") } style="display:flex;flex-direction:column;gap:var(--u2);">
+								<textarea class="input" name="notes_md" rows="10" placeholder="Internal context (markdown). Never sent over email.">{ d.NotesMD }</textarea>
+								<button class="btn btn--sm btn--primary" type="submit" style="align-self:flex-start;">Save notes</button>
+							</form>
+						</details>
+						if d.NotesHTML != "" {
+							<article class="note-body" style="margin-top:var(--u3);">
+								@templ.Raw(d.NotesHTML)
+							</article>
+						}
+						if d.NotesMD == "" {
+							<div class="mute" style="font-size:var(--size-xs);">No internal notes yet.</div>
+						}
+					</div>
+				</section>
+			}
+		</main>
+	}
+}
+
+func statusToggle(s string) string {
+	if s == "closed" {
+		return "open"
+	}
+	return "closed"
+}
