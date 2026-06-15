@@ -190,15 +190,35 @@ func (s *Service) HardDelete(ctx context.Context, ingestID string) error {
 // AppendMessage exposes the wrapper APPEND for the send + notes layers.
 // Returns the IMAP append wrapping any low-level error.
 func (s *Service) AppendMessage(ctx context.Context, folderName string, raw []byte, flags []imap.Flag) error {
+	_, err := s.AppendMessageUID(ctx, folderName, raw, flags, "")
+	return err
+}
+
+// AppendMessageUID APPENDs and returns the assigned UID. messageID is
+// the RFC 2822 Message-ID we set on `raw`; used as the SEARCH fallback
+// for servers that don't advertise APPENDUID.
+func (s *Service) AppendMessageUID(ctx context.Context, folderName string, raw []byte, flags []imap.Flag, messageID string) (uint32, error) {
 	if folderName == "" {
-		return errors.New("mailbox: empty folder")
+		return 0, errors.New("mailbox: empty folder")
 	}
 	c, err := dial(s.Cfg)
 	if err != nil {
-		return err
+		return 0, err
 	}
 	defer c.close()
-	return c.appendMessage(folderName, raw, flags)
+	uid, err := c.appendMessage(folderName, raw, flags)
+	if err != nil {
+		return 0, err
+	}
+	if uid != 0 || messageID == "" {
+		return uid, nil
+	}
+	// Fallback for servers without APPENDUID: SELECT then SEARCH by MID.
+	if _, err := c.selectFolder(folderName); err != nil {
+		return 0, nil
+	}
+	uid, _ = c.searchByMessageID(messageID)
+	return uid, nil
 }
 
 // Reply: APPEND raw to Sent + STORE +\Answered on original.
@@ -292,24 +312,46 @@ func (s *Service) FetchNoteBody(ctx context.Context, notesFolder string, uid uin
 }
 
 // EditNoteAppendExpunge appends a new note version, then marks the
-// previous UID \Deleted + EXPUNGEs. IMAP has no UPDATE — this is the
-// protocol-correct shape.
-func (s *Service) EditNoteAppendExpunge(ctx context.Context, notesFolder string, oldUID uint32, raw []byte) error {
+// previous version \Deleted + EXPUNGEs. IMAP has no UPDATE — this is
+// the protocol-correct shape.
+//
+// oldUID may be 0 (notes created by an earlier version that didn't
+// capture APPENDUID). When 0, we SEARCH by Message-ID to recover the
+// UID. Returns the new UID so the handler can persist it.
+func (s *Service) EditNoteAppendExpunge(ctx context.Context, notesFolder string, oldUID uint32, oldMessageID string, raw []byte, newMessageID string) (uint32, error) {
 	c, err := dial(s.Cfg)
 	if err != nil {
-		return err
+		return 0, err
 	}
 	defer c.close()
-	if err := c.appendMessage(notesFolder, raw, nil); err != nil {
-		return err
+	newUID, err := c.appendMessage(notesFolder, raw, nil)
+	if err != nil {
+		return 0, err
 	}
 	if _, err := c.selectFolder(notesFolder); err != nil {
-		return err
+		return newUID, err
+	}
+	// Recover the new UID via SEARCH if the server didn't advertise
+	// APPENDUID. The Message-ID we just APPEND'd is on the server now.
+	if newUID == 0 && newMessageID != "" {
+		if uid, _ := c.searchByMessageID(newMessageID); uid != 0 {
+			newUID = uid
+		}
+	}
+	// Find the OLD UID by Message-ID if we don't have one stored.
+	if oldUID == 0 && oldMessageID != "" {
+		if uid, _ := c.searchByMessageID(oldMessageID); uid != 0 {
+			oldUID = uid
+		}
+	}
+	if oldUID == 0 {
+		// Can't EXPUNGE without a target. Log path — handler logs.
+		return newUID, errors.New("note: cannot resolve old UID for EXPUNGE")
 	}
 	if err := c.storeFlag(oldUID, imap.FlagDeleted, true); err != nil {
-		return err
+		return newUID, err
 	}
-	return c.expungeUID(oldUID)
+	return newUID, c.expungeUID(oldUID)
 }
 
 // EnsureFolders creates the named IMAP folders if they don't already

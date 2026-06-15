@@ -39,10 +39,10 @@ func (s *Sink) UpsertFromIMAP(ctx context.Context, in mailbox.NoteUpsert) error 
 		Tags:         in.Tags,
 		SupersededBy: "",
 	}
-	// Upsert respects the unique (message_id) index, preserves
-	// CreatedAt via the gorm tag in Note struct, updates the mutable
-	// columns.
-	if err := s.Repo.Upsert(ctx, n); err != nil {
+	// UpsertContent — NOT Upsert. Poll must NEVER touch the
+	// superseded_by column or it would wipe out handler-set chain
+	// links every cycle (=> old versions reappear).
+	if err := s.Repo.UpsertContent(ctx, n); err != nil {
 		return err
 	}
 	// If the message carries X-Webmail-Note-Original-MID, mark every
