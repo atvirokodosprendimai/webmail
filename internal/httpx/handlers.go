@@ -61,14 +61,15 @@ type viewerKey struct{}
 
 func (a *App) inbox(w http.ResponseWriter, r *http.Request) {
 	u := auth.CurrentUser(r)
+	q := strings.TrimSpace(r.URL.Query().Get("q"))
 	ctx := context.WithValue(r.Context(), viewerKey{}, u.ID)
-	rows, err := a.fetchInboxRows(ctx, 50)
+	rows, err := a.fetchThreadedRows(ctx, mailbox.FolderRoleInbox, q, 100)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	_ = render.Inbox(u.DisplayName, a.navCounts(r.Context()), rows).Render(r.Context(), w)
+	_ = render.Inbox(u.DisplayName, a.navCounts(r.Context()), rows, q, "/inbox").Render(r.Context(), w)
 }
 
 // folderView renders the same list template as /inbox but for any role
@@ -85,29 +86,34 @@ func (a *App) folderView(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 		return
 	}
+	q := strings.TrimSpace(r.URL.Query().Get("q"))
 	ctx := context.WithValue(r.Context(), viewerKey{}, u.ID)
-	rows, err := a.fetchRowsForRole(ctx, role, 100)
+	rows, err := a.fetchThreadedRows(ctx, role, q, 200)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	_ = render.Inbox(u.DisplayName, a.navCounts(r.Context()), rows).Render(r.Context(), w)
+	_ = render.Inbox(u.DisplayName, a.navCounts(r.Context()), rows, q, "/folder/"+role).Render(r.Context(), w)
 }
 
 func (a *App) fetchRowsForRole(ctx context.Context, role string, limit int) ([]render.InboxRow, error) {
-	return a.fetchThreadedRows(ctx, role, limit)
+	return a.fetchThreadedRows(ctx, role, "", limit)
 }
 
 func (a *App) fetchInboxRows(ctx context.Context, limit int) ([]render.InboxRow, error) {
-	return a.fetchThreadedRows(ctx, mailbox.FolderRoleInbox, limit)
+	return a.fetchThreadedRows(ctx, mailbox.FolderRoleInbox, "", limit)
 }
 
 // fetchThreadedRows groups by thread_id, picks the latest message per
 // thread, computes per-thread count + OR'd flagged + attach indicators
 // across the whole thread (so an old flag still shows on the
 // representative row).
-func (a *App) fetchThreadedRows(ctx context.Context, role string, limit int) ([]render.InboxRow, error) {
+//
+// q (when non-empty) restricts to threads where ANY message matches
+// LIKE on subject / from_addr / from_name / body_text / to_addrs.
+// Case-insensitive via LOWER().
+func (a *App) fetchThreadedRows(ctx context.Context, role, q string, limit int) ([]render.InboxRow, error) {
 	// Read viewer user_id off the auth-loaded ctx (passed in via the
 	// goroutine-local mechanism would be heavier than reading the row).
 	// Bookmarked column fires when ANY bookmark for THIS user OR a
@@ -158,9 +164,9 @@ INNER JOIN (
   WHERE fx.role = ?
   GROUP BY mx.thread_id
 ) t ON t.thread_id = m.thread_id AND t.latest = m.received_at
-WHERE f.role = ?
+WHERE f.role = ?` + searchClause(q) + `
 ORDER BY m.received_at DESC
-LIMIT ?`, viewerID, role, role, limit).Scan(&rows).Error
+LIMIT ?`, searchArgs(viewerID, role, q, limit)...).Scan(&rows).Error
 	if err != nil {
 		return nil, err
 	}
@@ -698,6 +704,21 @@ func (a *App) noteShow(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	_ = render.NoteShow(u.DisplayName, a.navCounts(r.Context()), render.NoteView{
+		ID: n.ID, Title: n.Title, BodyHTML: n.BodyHTML, BodyMD: n.BodyMD,
+		Pinned: n.Pinned, Tags: n.Tags, UpdatedAt: n.UpdatedAt,
+	}).Render(r.Context(), w)
+}
+
+func (a *App) noteEdit(w http.ResponseWriter, r *http.Request) {
+	u := auth.CurrentUser(r)
+	id := chi.URLParam(r, "id")
+	n, err := a.NotesRepo.FindByID(r.Context(), id)
+	if err != nil {
+		http.Error(w, "not found", http.StatusNotFound)
+		return
+	}
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	_ = render.NoteEditor(u.DisplayName, a.navCounts(r.Context()), render.NoteEdit{
 		ID: n.ID, Title: n.Title, BodyMD: n.BodyMD, Pinned: n.Pinned, Tags: n.Tags,
 	}).Render(r.Context(), w)
@@ -738,6 +759,8 @@ func (a *App) noteSave(w http.ResponseWriter, r *http.Request) {
 		Pinned:    old.Pinned,
 	})
 	row, _ := a.NotesRepo.FindByMessageID(r.Context(), mid)
+	// Redirect to the view (not editor) after save so the user sees the
+	// rendered markdown.
 	http.Redirect(w, r, "/notes/"+row.ID, http.StatusSeeOther)
 }
 
@@ -854,6 +877,33 @@ func (a *App) bookmarksToRows(ctx context.Context, bs []bookmarks.Bookmark) []re
 		})
 	}
 	return out
+}
+
+// searchClause appends a thread-scoped LIKE filter when q is non-empty.
+// Matches threads where ANY message in the thread matches the term.
+func searchClause(q string) string {
+	if strings.TrimSpace(q) == "" {
+		return ""
+	}
+	return ` AND m.thread_id IN (
+  SELECT DISTINCT ms.thread_id FROM mailbox_ingest ms
+  WHERE
+    LOWER(ms.subject)   LIKE ? OR
+    LOWER(ms.from_addr) LIKE ? OR
+    LOWER(ms.from_name) LIKE ? OR
+    LOWER(ms.body_text) LIKE ? OR
+    LOWER(ms.to_addrs)  LIKE ?
+)`
+}
+
+func searchArgs(viewerID, role, q string, limit int) []any {
+	args := []any{viewerID, role, role}
+	if strings.TrimSpace(q) != "" {
+		like := "%" + strings.ToLower(q) + "%"
+		args = append(args, like, like, like, like, like)
+	}
+	args = append(args, limit)
+	return args
 }
 
 var _ = strconv.Itoa

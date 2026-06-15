@@ -1,6 +1,9 @@
 package render
 
-import "time"
+import (
+	"strings"
+	"time"
+)
 
 type NoteRow struct {
 	ID       string
@@ -57,6 +60,82 @@ type NoteEdit struct {
 	BodyMD  string
 	Pinned  bool
 	Tags    string
+}
+
+// NoteView is the read-only render of a note: rendered HTML body + view
+// actions (Edit, Pin, Delete).
+type NoteView struct {
+	ID        string
+	Title     string
+	BodyHTML  string
+	BodyMD    string
+	Pinned    bool
+	Tags      string
+	UpdatedAt time.Time
+}
+
+templ NoteShow(displayName string, counts NavCounts, n NoteView) {
+	@Base(n.Title + " — Notes") {
+		<main class="shell shell--read">
+			@Shell("notes", counts, displayName) {
+				<section class="reader">
+					<header class="reader__head">
+						<div>
+							<div class="reader__eyebrow">Note · updated { n.UpdatedAt.Format("Jan 2, 2006 · 15:04") }</div>
+							<h1 class="reader__subject">
+								{ n.Title }
+								if n.Pinned {
+									<span class="chip chip--warn" style="margin-left:var(--u2);" title="Pinned">
+										<svg class="icon icon--sm" viewBox="0 0 24 24"><path d="M12 17v5M9 10.76l3.24-3.24L15.5 4.26l4.24 4.24-3.26 3.26L13.24 15M5 21l4-4"/></svg>
+										Pinned
+									</span>
+								}
+							</h1>
+							if n.Tags != "" {
+								<div style="margin-top:var(--u2);display:flex;gap:var(--u);flex-wrap:wrap;">
+									for _, t := range splitTags(n.Tags) {
+										<span class="chip">{ t }</span>
+									}
+								</div>
+							}
+						</div>
+						<div class="reader__actions">
+							<a class="btn btn--primary" href={ templ.URL("/notes/" + n.ID + "/edit") }>
+								<svg class="icon icon--sm" viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+								Edit
+							</a>
+							<form method="post" action={ templ.URL("/notes/" + n.ID + "/pin") } style="display:inline;">
+								<input type="hidden" name="pinned" value={ boolStr(!n.Pinned) }/>
+								<button class="btn btn--sm" type="submit">
+									if n.Pinned {
+										Unpin
+									} else {
+										Pin
+									}
+								</button>
+							</form>
+							<form method="post" action={ templ.URL("/notes/" + n.ID + "/delete") } style="display:inline;">
+								<button class="btn btn--sm btn--danger" type="submit">Delete</button>
+							</form>
+						</div>
+					</header>
+					<article class="note-body">
+						@templ.Raw(n.BodyHTML)
+					</article>
+				</section>
+			}
+		</main>
+	}
+}
+
+func splitTags(s string) []string {
+	out := []string{}
+	for _, t := range strings.Fields(s) {
+		if t != "" {
+			out = append(out, t)
+		}
+	}
+	return out
 }
 
 templ NoteEditor(displayName string, counts NavCounts, n NoteEdit) {

@@ -178,3 +178,49 @@
   text-align: center;
   font-size: var(--size-sm);
 }
+
+/* ============ Rendered markdown (note view) ============ */
+.note-body {
+  font-size: var(--size-md);
+  color: var(--fg-soft);
+  line-height: var(--leading-loose);
+  max-width: 72ch;
+}
+.note-body h1 { font-size: var(--size-3xl); margin: var(--u6) 0 var(--u3); color: var(--fg); }
+.note-body h2 { font-size: var(--size-2xl); margin: var(--u5) 0 var(--u3); color: var(--fg); }
+.note-body h3 { font-size: var(--size-xl);  margin: var(--u4) 0 var(--u2); color: var(--fg); }
+.note-body h4 { font-size: var(--size-lg);  margin: var(--u4) 0 var(--u2); color: var(--fg); }
+.note-body p  { margin: var(--u3) 0; }
+.note-body ul, .note-body ol { margin: var(--u3) 0; padding-left: var(--u5); }
+.note-body li { margin: var(--u) 0; }
+.note-body code {
+  background: var(--bg-2);
+  padding: 2px 6px;
+  border-radius: var(--r-sm);
+  font-family: var(--font-mono);
+  font-size: 0.92em;
+}
+.note-body pre {
+  background: var(--bg-1);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  padding: var(--u3);
+  overflow-x: auto;
+  font-family: var(--font-mono);
+  font-size: var(--size-sm);
+  line-height: 1.6;
+  margin: var(--u4) 0;
+}
+.note-body pre code { background: transparent; padding: 0; }
+.note-body blockquote {
+  margin: var(--u3) 0;
+  padding: var(--u2) var(--u4);
+  border-left: 3px solid var(--border-strong);
+  color: var(--fg-mute);
+}
+.note-body a { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }
+.note-body hr { border: 0; border-top: 1px solid var(--border); margin: var(--u5) 0; }
+.note-body img { max-width: 100%; border-radius: var(--r-md); }
+.note-body table { border-collapse: collapse; margin: var(--u3) 0; }
+.note-body th, .note-body td { padding: var(--u2) var(--u3); border: 1px solid var(--border); text-align: left; }
+.note-body th { background: var(--bg-1); font-weight: var(--weight-semibold); }

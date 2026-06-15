@@ -38,32 +38,81 @@ type InboxRow struct {
 	ThreadCount int
 }
 
-// Inbox renders the full inbox page.
-templ Inbox(displayName string, counts NavCounts, rows []InboxRow) {
-	@Base("ORBITAL // inbox") {
+// Inbox renders the full inbox page. q = current search query, action =
+// form action URL (so /inbox and /folder/{role} both reuse this template).
+templ Inbox(displayName string, counts NavCounts, rows []InboxRow, q, action string) {
+	@Base(inboxTitle(action, q)) {
 		<main class="shell shell--list">
-			@Shell("inbox", counts, displayName) {
+			@Shell(activeFolderFromAction(action), counts, displayName) {
 				<section class="list">
 					<header class="list__head">
 						<div class="list__head-row">
 							<div>
-								<span class="list__title">Inbox</span>
-								<span class="list__title-count">/ { pad2(counts.InboxUnread) } unread · { pad2(counts.InboxTotal) } total</span>
+								<span class="list__title">{ inboxTitleHuman(action) }</span>
+								if q == "" {
+									<span class="list__title-count">{ itoa(counts.InboxUnread) } unread · { itoa(counts.InboxTotal) } total</span>
+								} else {
+									<span class="list__title-count">{ itoa(len(rows)) } matches</span>
+								}
 							</div>
 						</div>
+						<form method="get" action={ templ.URL(action) } style="margin-top:var(--u3);">
+							<div class="search">
+								<svg class="search__icn" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" fill="none"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+								<input type="search" name="q" value={ q } placeholder="Search subject, sender, body…" autocomplete="off"/>
+								if q != "" {
+									<a href={ templ.URL(action) } class="btn btn--sm btn--ghost" title="Clear">×</a>
+								}
+							</div>
+						</form>
 					</header>
 					<div class="list__rows" data-on-load="@get('/inbox/stream')">
 						for _, r := range rows {
 							@InboxRowItem(r)
 						}
 						if len(rows) == 0 {
-							<div class="empty">No messages.</div>
+							if q != "" {
+								<div class="empty">No matches for &ldquo;{ q }&rdquo;.</div>
+							} else {
+								<div class="empty">No messages.</div>
+							}
 						}
 					</div>
 				</section>
 			}
 		</main>
 	}
+}
+
+func inboxTitle(action, q string) string {
+	t := inboxTitleHuman(action)
+	if q != "" {
+		return t + ": " + q + " — ORBITAL"
+	}
+	return t + " — ORBITAL"
+}
+
+func inboxTitleHuman(action string) string {
+	switch action {
+	case "/inbox":
+		return "Inbox"
+	case "/folder/sent":
+		return "Sent"
+	case "/folder/drafts":
+		return "Drafts"
+	case "/folder/trash":
+		return "Trash"
+	case "/folder/archive":
+		return "Archive"
+	}
+	return "Inbox"
+}
+
+func activeFolderFromAction(action string) string {
+	if action == "/inbox" {
+		return "inbox"
+	}
+	return "inbox"
 }
 
 // InboxRowItem is a single row (used for SSE patches as well as

@@ -71,6 +71,7 @@ func New(a *App) http.Handler {
 		r.Get("/notes/new", a.noteNew)
 		r.Post("/notes", a.noteCreate)
 		r.Get("/notes/{id}", a.noteShow)
+		r.Get("/notes/{id}/edit", a.noteEdit)
 		r.Post("/notes/{id}", a.noteSave)
 		r.Post("/notes/{id}/pin", a.notePin)
 		r.Post("/notes/{id}/delete", a.noteDelete)
