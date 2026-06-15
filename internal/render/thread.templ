@@ -1,0 +1,281 @@
+package render
+
+import "time"
+
+type ThreadMessage struct {
+	IngestID   string
+	FromName   string
+	FromAddr   string
+	Subject    string
+	BodyText   string
+	BodyHTML   string
+	ReceivedAt time.Time
+	Seen       bool
+	Flagged    bool
+	Answered   bool
+	Attachments []ThreadAttachment
+}
+
+type ThreadAttachment struct {
+	ID       string
+	Filename string
+	MIME     string
+	Size     int64
+	Materialised bool
+}
+
+type ProjectOption struct {
+	Slug string
+	Name string
+}
+
+// BookmarkState surfaces whether the current thread is bookmarked
+// personally (PersonalID set) and/or team-shared (SharedID set).
+// Empty IDs mean "not bookmarked at that scope".
+type BookmarkState struct {
+	PersonalID string
+	SharedID   string
+}
+
+// Thread page renders one full thread of messages plus actions.
+templ Thread(displayName string, counts NavCounts, subject string, msgs []ThreadMessage, projects []ProjectOption, tagged []string, bookmark BookmarkState) {
+	@Base("ORBITAL // " + subject) {
+		<main class="shell">
+			@Shell("inbox", counts, displayName) {
+				<section class="reader" style="grid-column: span 2;">
+					<header class="reader__head">
+						<div>
+							<div class="mega plasma">◇ TRANSMISSION</div>
+							<h1 class="reader__subject">{ subject }</h1>
+						</div>
+						if len(msgs) > 0 {
+							@threadActions(msgs[0])
+						}
+					</header>
+					<details class="reader__tag" open>
+						<summary class="mono" style="cursor:pointer;">+ tag into project</summary>
+						<form method="post" action="/thread/tag" style="display:flex;flex-direction:column;gap:var(--u);margin-top:var(--u2);">
+							if len(msgs) > 0 {
+								<input type="hidden" name="ingest_id" value={ msgs[0].IngestID }/>
+							}
+							<select name="project_slug" class="input">
+								<option value="">— pick project —</option>
+								for _, p := range projects {
+									<option value={ p.Slug }>{ p.Name }</option>
+								}
+							</select>
+							<button class="btn btn--sm btn--primary" type="submit">Tag thread</button>
+						</form>
+						if len(tagged) > 0 {
+							<div style="margin-top:var(--u2);font-family:var(--font-mono);font-size:var(--size-xs);color:var(--ink-mute);">
+								Tagged in: { joinStr(tagged) }
+							</div>
+						}
+					</details>
+					if len(msgs) > 0 {
+						@threadBookmark(msgs[0].IngestID, bookmark)
+					}
+					for _, m := range msgs {
+						@threadMessage(m)
+					}
+					if len(msgs) > 0 {
+						<details class="reader__reply">
+							<summary class="mono">+ reply</summary>
+							<form method="post" action={ templ.URL("/thread/" + msgs[len(msgs)-1].IngestID + "/reply") } style="margin-top:var(--u2);display:flex;flex-direction:column;gap:var(--u2);">
+								<textarea name="body" class="input" rows="12" placeholder="Compose your transmission…" required>{ replyQuote(msgs[len(msgs)-1]) }</textarea>
+								<button class="btn btn--primary" type="submit">Transmit reply</button>
+							</form>
+						</details>
+					}
+				</section>
+			}
+		</main>
+	}
+}
+
+templ threadBookmark(ingestID string, b BookmarkState) {
+	<details class="reader__tag" open>
+		<summary class="mono" style="cursor:pointer;">🔖 bookmark for later</summary>
+		<div style="display:flex;flex-direction:column;gap:var(--u);margin-top:var(--u2);">
+			if b.PersonalID == "" {
+				<form method="post" action={ templ.URL("/thread/" + ingestID + "/bookmark") }>
+					<input type="hidden" name="scope" value="personal"/>
+					<input type="text" name="note" placeholder="optional note (visible only to you)" class="input"/>
+					<button class="btn btn--sm btn--primary" type="submit" style="margin-top:var(--u);">+ Bookmark (personal)</button>
+				</form>
+			} else {
+				<div style="display:flex;align-items:center;gap:var(--u);">
+					<span class="chip chip--plasma">⭐ personal bookmark</span>
+					<form method="post" action={ templ.URL("/bookmark/" + b.PersonalID + "/remove") } style="display:inline;">
+						<input type="hidden" name="back" value={ "/thread/" + ingestID }/>
+						<button class="btn btn--sm btn--ghost" type="submit">remove</button>
+					</form>
+				</div>
+			}
+			if b.SharedID == "" {
+				<form method="post" action={ templ.URL("/thread/" + ingestID + "/bookmark") }>
+					<input type="hidden" name="scope" value="shared"/>
+					<input type="text" name="note" placeholder="optional note (visible to team)" class="input"/>
+					<button class="btn btn--sm" type="submit" style="margin-top:var(--u);">+ Bookmark (team)</button>
+				</form>
+			} else {
+				<div style="display:flex;align-items:center;gap:var(--u);">
+					<span class="chip chip--violet">👥 team bookmark</span>
+					<form method="post" action={ templ.URL("/bookmark/" + b.SharedID + "/remove") } style="display:inline;">
+						<input type="hidden" name="back" value={ "/thread/" + ingestID }/>
+						<button class="btn btn--sm btn--ghost" type="submit">remove</button>
+					</form>
+				</div>
+			}
+		</div>
+	</details>
+}
+
+templ threadActions(m ThreadMessage) {
+	<div class="reader__actions">
+		<form method="post" action={ templ.URL("/thread/" + m.IngestID + "/flag") } style="display:inline;">
+			<input type="hidden" name="flagged" value={ boolStr(!m.Flagged) }/>
+			<button class="btn btn--sm" type="submit">
+				if m.Flagged {
+					Unstar
+				} else {
+					Star
+				}
+			</button>
+		</form>
+		<form method="post" action={ templ.URL("/thread/" + m.IngestID + "/seen") } style="display:inline;">
+			<input type="hidden" name="seen" value={ boolStr(!m.Seen) }/>
+			<button class="btn btn--sm" type="submit">
+				if m.Seen {
+					Mark unread
+				} else {
+					Mark read
+				}
+			</button>
+		</form>
+		<form method="post" action={ templ.URL("/thread/" + m.IngestID + "/move") } style="display:inline;">
+			<input type="hidden" name="dest" value="Archive"/>
+			<button class="btn btn--sm" type="submit">Archive</button>
+		</form>
+		<form method="post" action={ templ.URL("/thread/" + m.IngestID + "/move") } style="display:inline;">
+			<input type="hidden" name="dest" value="Trash"/>
+			<button class="btn btn--sm btn--danger" type="submit">Delete</button>
+		</form>
+	</div>
+}
+
+templ threadMessage(m ThreadMessage) {
+	<article class="msg" id={ "msg-" + m.IngestID }>
+		<header class="msg__head">
+			<div class="av av--plasma av--sm">{ initialOf(firstNonEmpty(m.FromName, m.FromAddr)) }</div>
+			<div>
+				<div class="msg__from">{ firstNonEmpty(m.FromName, m.FromAddr) }</div>
+				<div class="msg__when mono">{ m.ReceivedAt.Format("2006-01-02 · 15:04") }</div>
+			</div>
+		</header>
+		<div class="msg__body">
+			if m.BodyHTML != "" {
+				@templ.Raw(m.BodyHTML)
+			} else {
+				<pre style="white-space:pre-wrap;font-family:var(--font-sans);font-size:var(--size-sm);color:var(--ink-soft);line-height:1.6;">{ m.BodyText }</pre>
+			}
+		</div>
+		if len(m.Attachments) > 0 {
+			<div class="msg__attach">
+				<div class="mega">◇ attachments</div>
+				for _, a := range m.Attachments {
+					<div class="attach">
+						<span class="attach__name">{ a.Filename }</span>
+						<span class="attach__meta mono">{ a.MIME } · { humanBytes(a.Size) }</span>
+						if a.Materialised {
+							<a class="btn btn--sm" href={ templ.URL("/attach/" + a.ID) }>Download</a>
+						} else {
+							<span class="chip chip--ghost">tag thread to materialise</span>
+						}
+					</div>
+				}
+			</div>
+		}
+	</article>
+}
+
+func firstNonEmpty(a, b string) string {
+	if a != "" {
+		return a
+	}
+	return b
+}
+
+func boolStr(b bool) string {
+	if b {
+		return "true"
+	}
+	return "false"
+}
+
+func humanBytes(n int64) string {
+	const k = 1024
+	switch {
+	case n < k:
+		return itoa(int(n)) + " B"
+	case n < k*k:
+		return itoa(int(n/k)) + " KB"
+	default:
+		return itoa(int(n/(k*k))) + " MB"
+	}
+}
+
+// replyQuote builds the quoted "On <date>, X wrote: > body" block that
+// pre-fills the reply textarea. Mirrors send.QuoteBody but lives here
+// so the templ stays standalone — render layer mustn't import send.
+func replyQuote(m ThreadMessage) string {
+	body := m.BodyText
+	if body == "" {
+		body = "(no text body)"
+	}
+	from := firstNonEmpty(m.FromName, m.FromAddr)
+	var sb [64]byte
+	_ = sb
+	out := "\n\nOn " + m.ReceivedAt.Format("Mon, 02 Jan 2006 at 15:04") + ", "
+	if from != "" {
+		out += from
+	} else {
+		out += "they"
+	}
+	out += " wrote:\n"
+	for _, line := range splitLines(body) {
+		out += "> " + line + "\n"
+	}
+	return out
+}
+
+func splitLines(s string) []string {
+	out := []string{}
+	cur := ""
+	for _, c := range s {
+		if c == '\n' {
+			out = append(out, cur)
+			cur = ""
+			continue
+		}
+		if c == '\r' {
+			continue
+		}
+		cur += string(c)
+	}
+	if cur != "" {
+		out = append(out, cur)
+	}
+	return out
+}
+
+func joinStr(parts []string) string {
+	out := ""
+	for i, p := range parts {
+		if i > 0 {
+			out += ", "
+		}
+		out += p
+	}
+	return out
+}

@@ -1,0 +1,136 @@
+package render
+
+import "time"
+
+type ProjectListItem struct {
+	Slug        string
+	Name        string
+	Description string
+	ItemCount   int
+}
+
+type ProjectDetail struct {
+	Slug        string
+	Name        string
+	Description string
+	Items       []ProjectFeedItem
+}
+
+type ProjectFeedItem struct {
+	Kind         string // email | note
+	IngestID     string // for emails
+	NoteID       string // for notes
+	Title        string
+	From         string
+	Snippet      string
+	At           time.Time
+	Attachments  []ThreadAttachment
+}
+
+templ ProjectsIndex(displayName string, counts NavCounts, items []ProjectListItem) {
+	@Base("ORBITAL // projects") {
+		<main class="shell">
+			@Shell("projects", counts, displayName) {
+				<section class="reader" style="grid-column: span 2;">
+					<header class="reader__head">
+						<div>
+							<div class="mega plasma">◇ PROJECTS</div>
+							<h1 class="reader__subject">Workspace</h1>
+						</div>
+					</header>
+					<form method="post" action="/projects" style="display:flex;gap:var(--u);margin-bottom:var(--u4);">
+						<input class="input" type="text" name="name" placeholder="new project name" required/>
+						<button class="btn btn--primary" type="submit">+ create</button>
+					</form>
+					<div class="tile-grid">
+						for _, p := range items {
+							<a class="tile" href={ templ.URL("/p/" + p.Slug) }>
+								<div class="tile__label">{ p.Name }</div>
+								<div class="mono" style="font-size:var(--size-xs);color:var(--ink-mute);">
+									{ pad2(p.ItemCount) } items
+								</div>
+								if p.Description != "" {
+									<div style="margin-top:var(--u);font-family:var(--font-sans);font-size:var(--size-sm);color:var(--ink-soft);">{ p.Description }</div>
+								}
+							</a>
+						}
+						if len(items) == 0 {
+							<div class="mono" style="color:var(--ink-mute);">◇ no projects yet</div>
+						}
+					</div>
+				</section>
+			}
+		</main>
+	}
+}
+
+templ ProjectPage(displayName string, counts NavCounts, p ProjectDetail) {
+	@Base("ORBITAL // p/" + p.Slug) {
+		<main class="shell">
+			@Shell("projects", counts, displayName) {
+				<section class="reader" style="grid-column: span 2;">
+					<header class="reader__head">
+						<div>
+							<div class="mega plasma">◇ PROJECT</div>
+							<h1 class="reader__subject">{ p.Name }</h1>
+							if p.Description != "" {
+								<p style="color:var(--ink-soft);font-family:var(--font-sans);">{ p.Description }</p>
+							}
+						</div>
+					</header>
+					for _, it := range p.Items {
+						@projectFeedItem(it)
+					}
+					if len(p.Items) == 0 {
+						<div class="mono" style="color:var(--ink-mute);">◇ no tagged items yet</div>
+					}
+				</section>
+			}
+		</main>
+	}
+}
+
+templ projectFeedItem(it ProjectFeedItem) {
+	<article class="msg">
+		<header class="msg__head">
+			<div class="av av--plasma av--sm">{ initialOf(it.Title) }</div>
+			<div>
+				<div class="msg__from">
+					if it.Kind == "note" {
+						📝 { it.Title }
+					} else {
+						✉ { it.Title }
+					}
+				</div>
+				<div class="msg__when mono">
+					{ it.At.Format("2006-01-02 · 15:04") }
+					if it.From != "" {
+						· { it.From }
+					}
+				</div>
+			</div>
+		</header>
+		<div class="msg__body">
+			<pre style="white-space:pre-wrap;font-family:var(--font-sans);font-size:var(--size-sm);color:var(--ink-soft);line-height:1.6;">{ it.Snippet }</pre>
+		</div>
+		if len(it.Attachments) > 0 {
+			<div class="msg__attach">
+				<div class="mega">◇ attachments</div>
+				for _, a := range it.Attachments {
+					<div class="attach">
+						<span class="attach__name">{ a.Filename }</span>
+						<span class="attach__meta mono">{ a.MIME } · { humanBytes(a.Size) }</span>
+						<a class="btn btn--sm" href={ templ.URL("/attach/" + a.ID) }>Download</a>
+					</div>
+				}
+			</div>
+		}
+		<div style="display:flex;gap:var(--u);margin-top:var(--u);font-family:var(--font-mono);font-size:var(--size-xs);">
+			if it.Kind == "email" {
+				<a href={ templ.URL("/thread/" + it.IngestID) }>open thread →</a>
+			} else {
+				<a href={ templ.URL("/notes/" + it.NoteID) }>open note →</a>
+			}
+		</div>
+	</article>
+}

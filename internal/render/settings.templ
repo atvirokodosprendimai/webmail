@@ -1,0 +1,43 @@
+package render
+
+type SettingsView struct {
+	IMAPHost   string
+	IMAPPort   int
+	IMAPUser   string
+	IMAPTLS    string
+	SMTPHost   string
+	SMTPPort   int
+	SMTPUser   string
+	SMTPTLS    string
+	NotesFolder string
+	BlockTrackingPixels bool
+}
+
+templ Settings(displayName string, counts NavCounts, s SettingsView) {
+	@Base("ORBITAL // settings") {
+		<main class="shell">
+			@Shell("settings", counts, displayName) {
+				<section class="reader" style="grid-column: span 2;">
+					<header class="reader__head">
+						<div>
+							<div class="mega plasma">◇ SYSTEM // PREFERENCES</div>
+							<h1 class="reader__subject">Settings</h1>
+						</div>
+					</header>
+					<div class="msg">
+						<div class="mega">◇ shared mailbox (read-only)</div>
+						<div class="mono" style="font-size:var(--size-xs);color:var(--ink-mute);display:grid;grid-template-columns:160px 1fr;gap:var(--u);">
+							<span>IMAP_HOST</span><span>{ s.IMAPHost }:{ pad2(s.IMAPPort) }</span>
+							<span>IMAP_USERNAME</span><span>{ s.IMAPUser }</span>
+							<span>IMAP_TLS</span><span>{ s.IMAPTLS }</span>
+							<span>SMTP_HOST</span><span>{ s.SMTPHost }:{ pad2(s.SMTPPort) }</span>
+							<span>SMTP_USERNAME</span><span>{ s.SMTPUser }</span>
+							<span>SMTP_TLS</span><span>{ s.SMTPTLS }</span>
+							<span>NOTES_FOLDER</span><span>{ s.NotesFolder }</span>
+						</div>
+					</div>
+				</section>
+			}
+		</main>
+	}
+}

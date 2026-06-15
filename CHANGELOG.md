@@ -1,0 +1,22 @@
+# Changelog
+
+- 2026-06-15 `055acdd` plan: orbital webmail with imap smtp projects and notes
+- 2026-06-15 `8725c71` phase-0: repo bootstrap — layout, deps, makefile, dockerfile, ci gate
+- 2026-06-15 `5fb8c1d` phase-1+2: skeleton + auth + persistence
+- 2026-06-15 `dc6aee1` phase-3+4+5: imap wrapper + poll worker + write verbs
+- 2026-06-15 `65b8d60` phase-6+7+8+9+10: full webmail UI, send, projects, notes, settings
+- 2026-06-15 `ea14ff0` plan: mark phases 1-10 implemented; status -> completed
+- 2026-06-15 `5330d56` fix(imap): auto-CREATE folder on APPEND TRYCREATE
+- 2026-06-15 `d04bb95` fix(imap): decode RFC 2047 encoded-words (iso-8859-2, windows-1257, ...)
+- 2026-06-15 `d04bb95` fix(imap): decode RFC 2047 encoded-words (iso-8859-2, windows-1257, ...)
+- 2026-06-15 `b486d14` fix: persistent sessions + RFC 5322 From + Sent/Drafts folder view
+- 2026-06-15 `fa3c739` fix(smtp): use SMTP_USERNAME as envelope MAIL FROM; log every send
+- 2026-06-15 `4510169` ui: logout button in shell rail (replaces missing entry from real shell)
+- 2026-06-15 `77e28c8` fix(threading): group inbox by thread + fetch References header
+- 2026-06-15 `c4fbe20` plan: bookmark emails for later reply
+- 2026-06-15 `93d12c2` fix(reply): wrap msg-id with <>; pre-fill reply with quoted history
+- 2026-06-15 `8981007` bookmarks: phases 1-5 + scroll fix
+- 2026-06-15 `5aa4a3b` fix: never delete user .env in smoke/clean targets
+- 2026-06-15 `6df9ad0` policy: forbid agent deletion of data/ and .env
+- 2026-06-15 `0dc87ca` policy: repo-level no-delete rules in CLAUDE.md; ignore .env.swp
+- 2026-06-15 `c9383a3` ui: drop empty reader pane from inbox + notes list views

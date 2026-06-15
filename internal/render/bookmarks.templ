@@ -1,0 +1,77 @@
+package render
+
+import "time"
+
+type BookmarkRow struct {
+	ID         string
+	IngestID   string
+	Subject    string
+	FromName   string
+	FromAddr   string
+	Note       string
+	ReceivedAt time.Time
+	CreatedAt  time.Time
+}
+
+templ Bookmarks(displayName string, counts NavCounts, mine []BookmarkRow, team []BookmarkRow) {
+	@Base("ORBITAL // bookmarks") {
+		<main class="shell">
+			@Shell("bookmarks", counts, displayName) {
+				<section class="reader" style="grid-column: span 2; overflow-y:auto;">
+					<header class="reader__head">
+						<div>
+							<div class="mega plasma">🔖 BOOKMARKS</div>
+							<h1 class="reader__subject">For later</h1>
+						</div>
+					</header>
+					<section style="margin-top:var(--u4);">
+						<div class="mega">◇ mine — { pad2(len(mine)) }</div>
+						for _, b := range mine {
+							@bookmarkRow(b, "personal")
+						}
+						if len(mine) == 0 {
+							<div class="mono" style="color:var(--ink-mute);padding:var(--u2) 0;">◇ none — bookmark a thread from its page</div>
+						}
+					</section>
+					<section style="margin-top:var(--u4);">
+						<div class="mega">◇ team — { pad2(len(team)) }</div>
+						for _, b := range team {
+							@bookmarkRow(b, "shared")
+						}
+						if len(team) == 0 {
+							<div class="mono" style="color:var(--ink-mute);padding:var(--u2) 0;">◇ none</div>
+						}
+					</section>
+				</section>
+			}
+		</main>
+	}
+}
+
+templ bookmarkRow(b BookmarkRow, scope string) {
+	<article class="msg">
+		<header class="msg__head">
+			<div class="av av--plasma av--sm">{ initialOf(firstNonEmpty(b.FromName, b.FromAddr)) }</div>
+			<div style="flex:1;">
+				<div class="msg__from">
+					<a href={ templ.URL("/thread/" + b.IngestID) }>{ b.Subject }</a>
+					if scope == "personal" {
+						<span class="chip chip--plasma" style="margin-left:var(--u);">⭐</span>
+					} else {
+						<span class="chip chip--violet" style="margin-left:var(--u);">👥</span>
+					}
+				</div>
+				<div class="msg__when mono">
+					{ firstNonEmpty(b.FromName, b.FromAddr) } · { b.ReceivedAt.Format("2006-01-02 15:04") }
+				</div>
+				if b.Note != "" {
+					<div style="margin-top:var(--u);color:var(--ink-soft);font-family:var(--font-sans);font-size:var(--size-sm);">{ b.Note }</div>
+				}
+			</div>
+			<form method="post" action={ templ.URL("/bookmark/" + b.ID + "/remove") } style="display:inline;">
+				<input type="hidden" name="back" value="/bookmarks"/>
+				<button class="btn btn--sm btn--ghost" type="submit">remove</button>
+			</form>
+		</header>
+	</article>
+}

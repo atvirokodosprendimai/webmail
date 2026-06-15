@@ -1,0 +1,118 @@
+package render
+
+import "time"
+
+// InboxStub kept for the auth-only build prior to Phase 6 wiring.
+// Once Phase 6 handler is wired, Shell + Inbox replace it.
+templ InboxStub(displayName, email, role string) {
+	@Base("ORBITAL // inbox") {
+		<main class="shell shell--showcase">
+			<div class="showcase">
+				<header class="showcase__hero">
+					<div>
+						<h1 class="showcase__title">Welcome,<br/><em>{ displayName }</em>.</h1>
+						<p class="showcase__lede">{ email } · { role }</p>
+					</div>
+				</header>
+				<form method="post" action="/logout">
+					<button type="submit" class="btn btn--ghost">Logout</button>
+				</form>
+			</div>
+		</main>
+	}
+}
+
+// InboxRow is the projection used by the inbox list view. One row per
+// thread (latest message), with ThreadCount when count > 1.
+type InboxRow struct {
+	IngestID    string
+	Subject     string
+	FromName    string
+	FromAddr    string
+	Snippet     string
+	ReceivedAt  time.Time
+	Seen        bool
+	Flagged     bool
+	HasAttach   bool
+	Bookmarked  bool
+	ThreadCount int
+}
+
+// Inbox renders the full inbox page.
+templ Inbox(displayName string, counts NavCounts, rows []InboxRow) {
+	@Base("ORBITAL // inbox") {
+		<main class="shell shell--list">
+			@Shell("inbox", counts, displayName) {
+				<section class="list">
+					<header class="list__head">
+						<div class="list__head-row">
+							<div>
+								<span class="list__title">Inbox</span>
+								<span class="list__title-count">/ { pad2(counts.InboxUnread) } unread · { pad2(counts.InboxTotal) } total</span>
+							</div>
+						</div>
+					</header>
+					<div class="list__rows" data-on-load="@get('/inbox/stream')">
+						for _, r := range rows {
+							@InboxRowItem(r)
+						}
+						if len(rows) == 0 {
+							<div style="padding: var(--u4); color: var(--ink-mute); font-family: var(--font-mono); font-size: var(--size-sm);">
+								◇ no transmissions
+							</div>
+						}
+					</div>
+				</section>
+			}
+		</main>
+	}
+}
+
+// InboxRowItem is a single row (used for SSE patches as well as
+// initial render).
+templ InboxRowItem(r InboxRow) {
+	<a href={ templ.URL("/thread/" + r.IngestID) } class="row" id={ "row-" + r.IngestID }>
+		<div class="row__rail">
+			if !r.Seen {
+				<span class="dot is-plasma"></span>
+			} else {
+				<span class="dot"></span>
+			}
+		</div>
+		<div class="row__main">
+			<div class="row__from" style={ optionalWeight(r.Seen) }>
+				if r.FromName != "" {
+					{ r.FromName }
+				} else {
+					{ r.FromAddr }
+				}
+			</div>
+			<div class="row__subject" style={ optionalWeight(r.Seen) }>
+				{ r.Subject }
+				if r.ThreadCount > 1 {
+					<span class="chip chip--plasma" style="margin-left:var(--u);">{ pad2(r.ThreadCount) }</span>
+				}
+				if r.Flagged {
+					<span class="chip chip--solar" style="margin-left:var(--u);">★</span>
+				}
+				if r.HasAttach {
+					<span class="chip chip--ghost" style="margin-left:var(--u);">📎</span>
+				}
+				if r.Bookmarked {
+					<span class="chip chip--violet" style="margin-left:var(--u);">🔖</span>
+				}
+			</div>
+			<div class="row__snippet">{ r.Snippet }</div>
+		</div>
+		<div class="row__when">
+			{ r.ReceivedAt.Format("Jan 02 15:04") }
+		</div>
+	</a>
+}
+
+func optionalWeight(seen bool) string {
+	if seen {
+		return "font-weight: 400; color: var(--ink-soft);"
+	}
+	return "font-weight: 600; color: var(--ink);"
+}
