@@ -1,10 +1,21 @@
 name: docker
 
+# Build + push container images on full-semver tags only (vMAJOR.MINOR.PATCH).
+# v1, v1.2, v1.2.3-beta, branch pushes -> no build. Only v1.2.3-style tags
+# trigger a release. Manual workflow_dispatch is available for one-offs.
+
 on:
   push:
-    branches: [main]
-    tags: ["v*"]
+    tags:
+      # Match v1.2.3 — three numeric segments, no pre-release suffix.
+      # GitHub workflow filter (glob, not regex): three [0-9]+ separated
+      # by dots, anchored on the v prefix.
+      - "v[0-9]+.[0-9]+.[0-9]+"
   workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing vX.Y.Z tag to rebuild"
+        required: true
 
 env:
   REGISTRY: ghcr.io
@@ -18,6 +29,19 @@ jobs:
       packages: write
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref }}
+
+      - name: Verify tag is strict vMAJOR.MINOR.PATCH
+        # Belt-and-braces: the on.push.tags filter already restricts triggers,
+        # but workflow_dispatch can be invoked with anything; reject early.
+        run: |
+          tag="${{ github.event.inputs.tag || github.ref_name }}"
+          echo "tag=$tag"
+          if [[ ! "$tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::Tag '$tag' is not vMAJOR.MINOR.PATCH (e.g. v1.2.3). Refusing to build."
+            exit 1
+          fi
 
       - uses: docker/setup-qemu-action@v3
 
@@ -35,10 +59,15 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE }}
+          # type=semver emits the full vX.Y.Z, vX.Y (minor track), vX (major
+          # track), and `latest` when the tag matches semver. The same
+          # release tag fans out to four image tags so downstream users
+          # can pin to any granularity.
           tags: |
-            type=raw,value=latest,enable={{is_default_branch}}
-            type=ref,event=branch
-            type=ref,event=tag
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+            type=raw,value=latest
             type=sha,format=short
 
       - name: Build & push
