@@ -20,6 +20,10 @@ import (
 	"github.com/atvirokodosprendimai/webmail/internal/config"
 	"github.com/atvirokodosprendimai/webmail/internal/db"
 	"github.com/atvirokodosprendimai/webmail/internal/httpx"
+	"github.com/atvirokodosprendimai/webmail/internal/mailbox"
+	"github.com/atvirokodosprendimai/webmail/internal/notes"
+	"github.com/atvirokodosprendimai/webmail/internal/projects"
+	"github.com/atvirokodosprendimai/webmail/internal/uploads"
 )
 
 func main() {
@@ -57,20 +61,63 @@ func runServer() error {
 	sess := auth.NewSessions(cfg.SessionMaxAge)
 	authHandler := &auth.Handler{Repo: authRepo, Sess: sess}
 
-	handler := httpx.New(httpx.Deps{
-		Auth:     authHandler,
-		Sessions: sess,
-		AuthRepo: authRepo,
-	})
+	mailboxRepo := mailbox.NewRepo(gdb)
+	bus := mailbox.NewBus()
+	imapCfg := mailbox.AccountConfig{
+		Host: cfg.IMAPHost, Port: cfg.IMAPPort,
+		Username: cfg.IMAPUsername, Password: cfg.IMAPPassword,
+		TLSMode: cfg.IMAPTLS,
+	}
+	accountID, err := mailboxRepo.EnsureAccount(context.Background(), imapCfg)
+	if err != nil {
+		return err
+	}
+	mailboxSvc := &mailbox.Service{Cfg: imapCfg, Repo: mailboxRepo, Bus: bus, Log: log}
+
+	projectsRepo := projects.NewRepo(gdb)
+	notesRepo := notes.NewRepo(gdb)
+	uploadStore := &uploads.Store{Root: cfg.UploadsDir}
+	if err := uploadStore.EnsureRoot(); err != nil {
+		return err
+	}
+
+	app := &httpx.App{
+		Cfg:          cfg,
+		DB:           gdb,
+		AuthRepo:     authRepo,
+		AuthHandler:  authHandler,
+		Sessions:     sess,
+		MailboxRepo:  mailboxRepo,
+		MailboxSvc:   mailboxSvc,
+		Bus:          bus,
+		ProjectsRepo: projectsRepo,
+		NotesRepo:    notesRepo,
+		Uploads:      uploadStore,
+	}
 
 	srv := &http.Server{
 		Addr:              cfg.Listen,
-		Handler:           handler,
+		Handler:           httpx.New(app),
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
+
+	poll := &mailbox.PollWorker{
+		Cfg:           imapCfg,
+		AccountID:     accountID,
+		Interval:      cfg.PollInterval,
+		FlagSyncEvery: cfg.FlagSyncEvery,
+		Repo:          mailboxRepo,
+		Bus:           bus,
+		Log:           log,
+	}
+	if cfg.IMAPHost != "" && cfg.IMAPUsername != "" && cfg.IMAPPassword != "" {
+		poll.Start(ctx)
+	} else {
+		log.Warn("IMAP not fully configured — poll worker disabled")
+	}
 
 	go func() {
 		log.Info("http listening", "addr", cfg.Listen)

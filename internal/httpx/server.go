@@ -1,5 +1,6 @@
-// Package httpx wires the chi router, static file embed, and the
-// shared mailbox bus into a single *http.Server suitable for cmd/webmail.
+// Package httpx wires the chi router and embedded static files into a
+// single *http.Server. Routes are defined here; handler logic lives in
+// handlers.go.
 package httpx
 
 import (
@@ -9,7 +10,6 @@ import (
 	"time"
 
 	"github.com/atvirokodosprendimai/webmail/internal/auth"
-	"github.com/atvirokodosprendimai/webmail/internal/render"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 )
@@ -17,23 +17,15 @@ import (
 //go:embed all:static
 var staticFS embed.FS
 
-// Deps is the set of pre-wired application dependencies the router needs.
-type Deps struct {
-	Auth     *auth.Handler
-	Sessions *auth.Sessions
-	AuthRepo *auth.Repo
-}
-
-func New(d Deps) http.Handler {
+func New(a *App) http.Handler {
 	r := chi.NewRouter()
 
 	r.Use(middleware.RequestID)
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.Timeout(60 * time.Second))
-	r.Use(d.Sessions.LoadAndSave)
+	r.Use(a.Sessions.LoadAndSave)
 
-	// Static — embedded; no disk lookup at runtime.
 	sub, _ := fs.Sub(staticFS, "static")
 	r.Handle("/static/*", http.StripPrefix("/static/", http.FileServer(http.FS(sub))))
 
@@ -42,20 +34,43 @@ func New(d Deps) http.Handler {
 		_, _ = w.Write([]byte("ok"))
 	})
 
-	r.Get("/login", d.Auth.LoginPage)
-	r.Post("/login", d.Auth.LoginSubmit)
-	r.Post("/logout", d.Auth.Logout)
+	r.Get("/login", a.AuthHandler.LoginPage)
+	r.Post("/login", a.AuthHandler.LoginSubmit)
+	r.Post("/logout", a.AuthHandler.Logout)
 
 	r.Group(func(r chi.Router) {
-		r.Use(auth.RequireUser(d.Sessions, d.AuthRepo))
+		r.Use(auth.RequireUser(a.Sessions, a.AuthRepo))
 		r.Get("/", func(w http.ResponseWriter, r *http.Request) {
 			http.Redirect(w, r, "/inbox", http.StatusSeeOther)
 		})
-		r.Get("/inbox", func(w http.ResponseWriter, r *http.Request) {
-			u := auth.CurrentUser(r)
-			w.Header().Set("Content-Type", "text/html; charset=utf-8")
-			_ = render.InboxStub(u.DisplayName, u.Email, u.Role).Render(r.Context(), w)
-		})
+
+		r.Get("/inbox", a.inbox)
+		r.Get("/inbox/stream", a.inboxStream)
+		r.Get("/thread/{id}", a.thread)
+		r.Post("/thread/{id}/seen", a.threadSeen)
+		r.Post("/thread/{id}/flag", a.threadFlag)
+		r.Post("/thread/{id}/move", a.threadMove)
+		r.Post("/thread/{id}/reply", a.threadReply)
+		r.Post("/thread/tag", a.threadTag)
+
+		r.Get("/compose", a.composePage)
+		r.Post("/compose/send", a.composeSend)
+
+		r.Get("/projects", a.projectsIndex)
+		r.Post("/projects", a.projectsCreate)
+		r.Get("/p/{slug}", a.projectPage)
+
+		r.Get("/attach/{id}", a.attachDownload)
+
+		r.Get("/notes", a.notesIndex)
+		r.Get("/notes/new", a.noteNew)
+		r.Post("/notes", a.noteCreate)
+		r.Get("/notes/{id}", a.noteShow)
+		r.Post("/notes/{id}", a.noteSave)
+		r.Post("/notes/{id}/pin", a.notePin)
+		r.Post("/notes/{id}/delete", a.noteDelete)
+
+		r.Get("/settings", a.settings)
 	})
 
 	return r

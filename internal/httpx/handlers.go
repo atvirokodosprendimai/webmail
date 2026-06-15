@@ -1,0 +1,662 @@
+package httpx
+
+import (
+	"context"
+	"fmt"
+	"net/http"
+	"strconv"
+	"strings"
+	"time"
+
+	"github.com/atvirokodosprendimai/webmail/internal/auth"
+	"github.com/atvirokodosprendimai/webmail/internal/config"
+	"github.com/atvirokodosprendimai/webmail/internal/mailbox"
+	"github.com/atvirokodosprendimai/webmail/internal/notes"
+	"github.com/atvirokodosprendimai/webmail/internal/projects"
+	"github.com/atvirokodosprendimai/webmail/internal/render"
+	"github.com/atvirokodosprendimai/webmail/internal/send"
+	"github.com/atvirokodosprendimai/webmail/internal/uploads"
+	"github.com/go-chi/chi/v5"
+	"gorm.io/gorm"
+)
+
+// App bundles the wired application services. One instance built in
+// cmd/webmail/main.go; passed into New() for routing.
+type App struct {
+	Cfg          config.Config
+	DB           *gorm.DB
+	AuthRepo     *auth.Repo
+	AuthHandler  *auth.Handler
+	Sessions     *auth.Sessions
+	MailboxRepo  *mailbox.Repo
+	MailboxSvc   *mailbox.Service
+	Bus          *mailbox.Bus
+	ProjectsRepo *projects.Repo
+	NotesRepo    *notes.Repo
+	Uploads      *uploads.Store
+}
+
+// --- inbox / thread ---
+
+func (a *App) navCounts(ctx context.Context) render.NavCounts {
+	var unread, total int64
+	a.DB.WithContext(ctx).
+		Table("mailbox_ingest").
+		Joins("INNER JOIN mailbox_folder ON mailbox_folder.id = mailbox_ingest.folder_id").
+		Where("mailbox_folder.role = ?", mailbox.FolderRoleInbox).
+		Count(&total)
+	a.DB.WithContext(ctx).
+		Table("mailbox_ingest").
+		Joins("INNER JOIN mailbox_folder ON mailbox_folder.id = mailbox_ingest.folder_id").
+		Where("mailbox_folder.role = ? AND mailbox_ingest.seen = 0", mailbox.FolderRoleInbox).
+		Count(&unread)
+	return render.NavCounts{InboxUnread: int(unread), InboxTotal: int(total)}
+}
+
+func (a *App) inbox(w http.ResponseWriter, r *http.Request) {
+	u := auth.CurrentUser(r)
+	rows, err := a.fetchInboxRows(r.Context(), 50)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	_ = render.Inbox(u.DisplayName, a.navCounts(r.Context()), rows).Render(r.Context(), w)
+}
+
+func (a *App) fetchInboxRows(ctx context.Context, limit int) ([]render.InboxRow, error) {
+	var rows []struct {
+		ID         string
+		Subject    string
+		FromName   string
+		FromAddr   string
+		BodyText   string
+		ReceivedAt time.Time
+		Seen       bool
+		Flagged    bool
+		HasAttach  bool
+	}
+	err := a.DB.WithContext(ctx).
+		Table("mailbox_ingest AS m").
+		Select("m.id, m.subject, m.from_name, m.from_addr, m.body_text, m.received_at, m.seen, m.flagged, EXISTS (SELECT 1 FROM mailbox_attachment a WHERE a.ingest_id = m.id) AS has_attach").
+		Joins("INNER JOIN mailbox_folder f ON f.id = m.folder_id").
+		Where("f.role = ?", mailbox.FolderRoleInbox).
+		Order("m.received_at DESC").
+		Limit(limit).
+		Scan(&rows).Error
+	if err != nil {
+		return nil, err
+	}
+	out := make([]render.InboxRow, 0, len(rows))
+	for _, r := range rows {
+		snip := r.BodyText
+		if len(snip) > 140 {
+			snip = snip[:140] + "…"
+		}
+		snip = strings.ReplaceAll(snip, "\n", " ")
+		out = append(out, render.InboxRow{
+			IngestID:   r.ID,
+			Subject:    r.Subject,
+			FromName:   r.FromName,
+			FromAddr:   r.FromAddr,
+			Snippet:    snip,
+			ReceivedAt: r.ReceivedAt,
+			Seen:       r.Seen,
+			Flagged:    r.Flagged,
+			HasAttach:  r.HasAttach,
+		})
+	}
+	return out, nil
+}
+
+func (a *App) inboxStream(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/event-stream")
+	w.Header().Set("Cache-Control", "no-cache")
+	w.Header().Set("Connection", "keep-alive")
+	flusher, ok := w.(http.Flusher)
+	if !ok {
+		http.Error(w, "stream unsupported", http.StatusInternalServerError)
+		return
+	}
+	sub, cancel := a.Bus.Subscribe()
+	defer cancel()
+	ctx := r.Context()
+	// initial fragment
+	rows, _ := a.fetchInboxRows(ctx, 50)
+	_ = writeRowsFragment(w, rows)
+	flusher.Flush()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-sub:
+			rows, _ := a.fetchInboxRows(ctx, 50)
+			_ = writeRowsFragment(w, rows)
+			flusher.Flush()
+		case <-time.After(30 * time.Second):
+			fmt.Fprint(w, ": ping\n\n")
+			flusher.Flush()
+		}
+	}
+}
+
+func writeRowsFragment(w http.ResponseWriter, rows []render.InboxRow) error {
+	// Datastar morph: send `event: datastar-patch-elements\ndata: ...`.
+	// To keep this dependency-light we emit a plain SSE message that the
+	// client uses for a `data-on('sse:rows')` reload trigger. Phase 6
+	// wires real Datastar fragments.
+	fmt.Fprint(w, "event: rows\n")
+	fmt.Fprint(w, "data: refresh\n\n")
+	return nil
+}
+
+func (a *App) thread(w http.ResponseWriter, r *http.Request) {
+	u := auth.CurrentUser(r)
+	id := chi.URLParam(r, "id")
+	ing, err := a.MailboxRepo.FindIngest(r.Context(), id)
+	if err != nil {
+		http.Error(w, "not found", http.StatusNotFound)
+		return
+	}
+	// Mark seen via foreground service (issues SELECT + STORE).
+	go func() {
+		if !ing.Seen {
+			_, _, _ = a.MailboxSvc.OpenThreadFetch(context.Background(), id)
+		}
+	}()
+	thread, err := a.MailboxRepo.ThreadIngests(r.Context(), ing.ThreadID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	msgs := make([]render.ThreadMessage, 0, len(thread))
+	for _, m := range thread {
+		atts, _ := a.MailboxRepo.AttachmentsForIngest(r.Context(), m.ID)
+		ratt := make([]render.ThreadAttachment, 0, len(atts))
+		for _, a := range atts {
+			ratt = append(ratt, render.ThreadAttachment{
+				ID: a.ID, Filename: a.Filename, MIME: a.MIME, Size: a.SizeBytes,
+				Materialised: a.UploadSHA256 != "" && a.UploadSHA256 != "TOO_LARGE",
+			})
+		}
+		msgs = append(msgs, render.ThreadMessage{
+			IngestID:    m.ID,
+			FromName:    m.FromName,
+			FromAddr:    m.FromAddr,
+			Subject:     m.Subject,
+			BodyText:    m.BodyText,
+			BodyHTML:    m.BodyHTML,
+			ReceivedAt:  m.ReceivedAt,
+			Seen:        m.Seen,
+			Flagged:     m.Flagged,
+			Answered:    m.Answered,
+			Attachments: ratt,
+		})
+	}
+	// project options
+	allProjects, _ := a.ProjectsRepo.List(r.Context())
+	opts := make([]render.ProjectOption, 0, len(allProjects))
+	for _, p := range allProjects {
+		opts = append(opts, render.ProjectOption{Slug: p.Slug, Name: p.Name})
+	}
+	// already-tagged
+	tagged := []string{}
+	if ps, err := a.ProjectsRepo.ProjectsForMessage(r.Context(), ing.MessageID); err == nil {
+		for _, p := range ps {
+			tagged = append(tagged, p.Name)
+		}
+	}
+	subject := "(no subject)"
+	if len(msgs) > 0 && msgs[0].Subject != "" {
+		subject = msgs[0].Subject
+	}
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	_ = render.Thread(u.DisplayName, a.navCounts(r.Context()), subject, msgs, opts, tagged).Render(r.Context(), w)
+}
+
+func (a *App) threadSeen(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	seen := r.FormValue("seen") == "true"
+	if err := a.MailboxSvc.MarkSeen(r.Context(), id, seen); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	http.Redirect(w, r, "/thread/"+id, http.StatusSeeOther)
+}
+
+func (a *App) threadFlag(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	flagged := r.FormValue("flagged") == "true"
+	if err := a.MailboxSvc.MarkFlagged(r.Context(), id, flagged); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	http.Redirect(w, r, "/thread/"+id, http.StatusSeeOther)
+}
+
+func (a *App) threadMove(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	dest := r.FormValue("dest")
+	folderName := dest
+	switch strings.ToLower(dest) {
+	case "trash":
+		folderName = a.Cfg.IMAPTrashFolder
+	case "archive":
+		folderName = a.Cfg.IMAPArchiveFolder
+	}
+	if err := a.MailboxSvc.MoveTo(r.Context(), id, folderName); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	http.Redirect(w, r, "/inbox", http.StatusSeeOther)
+}
+
+// --- compose / send / reply ---
+
+func (a *App) composePage(w http.ResponseWriter, r *http.Request) {
+	u := auth.CurrentUser(r)
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	_ = render.Compose(u.DisplayName, a.navCounts(r.Context()), render.ComposePrefill{}, "").Render(r.Context(), w)
+}
+
+func (a *App) composeSend(w http.ResponseWriter, r *http.Request) {
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "bad form", http.StatusBadRequest)
+		return
+	}
+	u := auth.CurrentUser(r)
+	cmd := send.Command{
+		From:    fmt.Sprintf("%q <%s>", u.DisplayName, u.Email),
+		To:      splitAddrs(r.FormValue("to")),
+		Cc:      splitAddrs(r.FormValue("cc")),
+		Subject: r.FormValue("subject"),
+		BodyText: r.FormValue("body"),
+		ReplyTo:  a.Cfg.IMAPUsername,
+	}
+	replyTo := r.FormValue("reply_to")
+	if replyTo != "" {
+		orig, err := a.MailboxRepo.FindIngest(r.Context(), replyTo)
+		if err == nil {
+			cmd.InReplyTo = orig.MessageID
+			cmd.Refs = append(strings.Fields(orig.References), orig.MessageID)
+		}
+	}
+	_, raw, err := send.BuildMessage(cmd)
+	if err != nil {
+		http.Error(w, "build: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if err := send.Send(send.Config{
+		Host: a.Cfg.SMTPHost, Port: a.Cfg.SMTPPort, TLSMode: a.Cfg.SMTPTLS,
+		Username: a.Cfg.SMTPUsername, Password: a.Cfg.SMTPPassword,
+	}, cmd.From, append(cmd.To, cmd.Cc...), raw); err != nil {
+		http.Error(w, "smtp: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	// Best-effort APPEND to Sent + STORE +\Answered on original.
+	_ = a.MailboxSvc.Reply(r.Context(), replyTo, a.Cfg.IMAPSentFolder, raw)
+	http.Redirect(w, r, "/inbox", http.StatusSeeOther)
+}
+
+func splitAddrs(s string) []string {
+	parts := strings.FieldsFunc(s, func(r rune) bool { return r == ',' || r == ';' })
+	out := make([]string, 0, len(parts))
+	for _, p := range parts {
+		p = strings.TrimSpace(p)
+		if p != "" {
+			out = append(out, p)
+		}
+	}
+	return out
+}
+
+func (a *App) threadReply(w http.ResponseWriter, r *http.Request) {
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "bad form", http.StatusBadRequest)
+		return
+	}
+	id := chi.URLParam(r, "id")
+	orig, err := a.MailboxRepo.FindIngest(r.Context(), id)
+	if err != nil {
+		http.Error(w, "not found", http.StatusNotFound)
+		return
+	}
+	u := auth.CurrentUser(r)
+	cmd := send.Command{
+		From:      fmt.Sprintf("%q <%s>", u.DisplayName, u.Email),
+		To:        []string{orig.FromAddr},
+		Subject:   "Re: " + orig.Subject,
+		BodyText:  r.FormValue("body"),
+		ReplyTo:   a.Cfg.IMAPUsername,
+		InReplyTo: orig.MessageID,
+		Refs:      append(strings.Fields(orig.References), orig.MessageID),
+	}
+	_, raw, err := send.BuildMessage(cmd)
+	if err != nil {
+		http.Error(w, "build: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if err := send.Send(send.Config{
+		Host: a.Cfg.SMTPHost, Port: a.Cfg.SMTPPort, TLSMode: a.Cfg.SMTPTLS,
+		Username: a.Cfg.SMTPUsername, Password: a.Cfg.SMTPPassword,
+	}, cmd.From, cmd.To, raw); err != nil {
+		http.Error(w, "smtp: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	_ = a.MailboxSvc.Reply(r.Context(), id, a.Cfg.IMAPSentFolder, raw)
+	http.Redirect(w, r, "/thread/"+id, http.StatusSeeOther)
+}
+
+// --- projects ---
+
+func (a *App) projectsIndex(w http.ResponseWriter, r *http.Request) {
+	u := auth.CurrentUser(r)
+	all, _ := a.ProjectsRepo.List(r.Context())
+	items := make([]render.ProjectListItem, 0, len(all))
+	for _, p := range all {
+		its, _ := a.ProjectsRepo.ItemsForProject(r.Context(), p.ID)
+		items = append(items, render.ProjectListItem{
+			Slug: p.Slug, Name: p.Name, Description: p.Description, ItemCount: len(its),
+		})
+	}
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	_ = render.ProjectsIndex(u.DisplayName, a.navCounts(r.Context()), items).Render(r.Context(), w)
+}
+
+func (a *App) projectsCreate(w http.ResponseWriter, r *http.Request) {
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "bad form", http.StatusBadRequest)
+		return
+	}
+	u := auth.CurrentUser(r)
+	p, err := a.ProjectsRepo.Create(r.Context(), r.FormValue("name"), r.FormValue("description"), u.ID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	http.Redirect(w, r, "/p/"+p.Slug, http.StatusSeeOther)
+}
+
+func (a *App) projectPage(w http.ResponseWriter, r *http.Request) {
+	u := auth.CurrentUser(r)
+	slug := chi.URLParam(r, "slug")
+	p, err := a.ProjectsRepo.FindBySlug(r.Context(), slug)
+	if err != nil {
+		http.Error(w, "not found", http.StatusNotFound)
+		return
+	}
+	items, _ := a.ProjectsRepo.ItemsForProject(r.Context(), p.ID)
+	feed := make([]render.ProjectFeedItem, 0, len(items))
+	for _, it := range items {
+		switch it.ItemKind {
+		case projects.KindEmail:
+			ing, err := a.MailboxRepo.FindIngestByMessageID(r.Context(), it.MessageID)
+			if err != nil {
+				continue
+			}
+			atts, _ := a.MailboxRepo.AttachmentsForIngest(r.Context(), ing.ID)
+			ratt := make([]render.ThreadAttachment, 0, len(atts))
+			for _, a := range atts {
+				if a.UploadSHA256 == "" || a.UploadSHA256 == "TOO_LARGE" {
+					continue
+				}
+				ratt = append(ratt, render.ThreadAttachment{
+					ID: a.ID, Filename: a.Filename, MIME: a.MIME, Size: a.SizeBytes, Materialised: true,
+				})
+			}
+			feed = append(feed, render.ProjectFeedItem{
+				Kind:        "email",
+				IngestID:    ing.ID,
+				Title:       ing.Subject,
+				From:        firstNonEmpty(ing.FromName, ing.FromAddr),
+				Snippet:     truncate(ing.BodyText, 240),
+				At:          ing.ReceivedAt,
+				Attachments: ratt,
+			})
+		case projects.KindNote:
+			n, err := a.NotesRepo.FindByMessageID(r.Context(), it.MessageID)
+			if err != nil {
+				continue
+			}
+			feed = append(feed, render.ProjectFeedItem{
+				Kind:    "note",
+				NoteID:  n.ID,
+				Title:   n.Title,
+				Snippet: truncate(n.BodyMD, 240),
+				At:      n.UpdatedAt,
+			})
+		}
+	}
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	_ = render.ProjectPage(u.DisplayName, a.navCounts(r.Context()), render.ProjectDetail{
+		Slug: p.Slug, Name: p.Name, Description: p.Description, Items: feed,
+	}).Render(r.Context(), w)
+}
+
+func firstNonEmpty(a, b string) string {
+	if strings.TrimSpace(a) != "" {
+		return a
+	}
+	return b
+}
+
+func truncate(s string, n int) string {
+	if len(s) <= n {
+		return s
+	}
+	return s[:n] + "…"
+}
+
+// threadTag tags every message in a thread into a project AND
+// materialises every attachment that isn't yet on disk.
+func (a *App) threadTag(w http.ResponseWriter, r *http.Request) {
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "bad form", http.StatusBadRequest)
+		return
+	}
+	u := auth.CurrentUser(r)
+	id := r.FormValue("ingest_id")
+	slug := r.FormValue("project_slug")
+	if slug == "" {
+		http.Error(w, "project required", http.StatusBadRequest)
+		return
+	}
+	p, err := a.ProjectsRepo.FindBySlug(r.Context(), slug)
+	if err != nil {
+		http.Error(w, "no such project", http.StatusBadRequest)
+		return
+	}
+	root, err := a.MailboxRepo.FindIngest(r.Context(), id)
+	if err != nil {
+		http.Error(w, "not found", http.StatusNotFound)
+		return
+	}
+	thread, _ := a.MailboxRepo.ThreadIngests(r.Context(), root.ThreadID)
+	for _, m := range thread {
+		_, _ = a.ProjectsRepo.Tag(r.Context(), p.ID, m.MessageID, projects.KindEmail, u.ID)
+		// Materialise attachments not yet on disk.
+		atts, _ := a.MailboxRepo.AttachmentsForIngest(r.Context(), m.ID)
+		for _, at := range atts {
+			if at.UploadSHA256 != "" {
+				continue
+			}
+			if a.Cfg.AttachmentMaxBytes > 0 && at.SizeBytes > a.Cfg.AttachmentMaxBytes {
+				_ = a.MailboxRepo.UpdateAttachmentUpload(r.Context(), at.ID, "TOO_LARGE", at.SizeBytes)
+				continue
+			}
+			raw, err := a.MailboxSvc.MaterialiseAttachment(r.Context(), m.ID, at.MIMEPartID, at.TransferEncoding)
+			if err != nil {
+				continue
+			}
+			sha, size, err := a.Uploads.Write(raw)
+			if err != nil {
+				continue
+			}
+			_ = a.MailboxRepo.UpdateAttachmentUpload(r.Context(), at.ID, sha, size)
+		}
+	}
+	http.Redirect(w, r, "/p/"+p.Slug, http.StatusSeeOther)
+}
+
+func (a *App) attachDownload(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	var att mailbox.Attachment
+	if err := a.DB.WithContext(r.Context()).Where("id = ?", id).First(&att).Error; err != nil {
+		http.Error(w, "not found", http.StatusNotFound)
+		return
+	}
+	if att.UploadSHA256 == "" || att.UploadSHA256 == "TOO_LARGE" {
+		http.Error(w, "not materialised", http.StatusNotFound)
+		return
+	}
+	a.Uploads.Serve(w, r, att.UploadSHA256, att.Filename, att.MIME)
+}
+
+// --- notes ---
+
+func (a *App) notesIndex(w http.ResponseWriter, r *http.Request) {
+	u := auth.CurrentUser(r)
+	ns, _ := a.NotesRepo.List(r.Context())
+	rows := make([]render.NoteRow, 0, len(ns))
+	for _, n := range ns {
+		rows = append(rows, render.NoteRow{
+			ID: n.ID, Title: n.Title, Preview: truncate(n.BodyMD, 120),
+			Pinned: n.Pinned, UpdatedAt: n.UpdatedAt,
+		})
+	}
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	_ = render.NotesIndex(u.DisplayName, a.navCounts(r.Context()), rows).Render(r.Context(), w)
+}
+
+func (a *App) noteNew(w http.ResponseWriter, r *http.Request) {
+	u := auth.CurrentUser(r)
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	_ = render.NoteEditor(u.DisplayName, a.navCounts(r.Context()), render.NoteEdit{}).Render(r.Context(), w)
+}
+
+func (a *App) noteCreate(w http.ResponseWriter, r *http.Request) {
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "bad form", http.StatusBadRequest)
+		return
+	}
+	u := auth.CurrentUser(r)
+	title := strings.TrimSpace(r.FormValue("title"))
+	body := r.FormValue("body_md")
+	mid, raw, err := notes.BuildNoteMessage(u.Email, u.DisplayName, title, body, "", 1)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if err := a.MailboxSvc.AppendMessage(r.Context(), a.Cfg.IMAPNotesFolder, raw, nil); err != nil {
+		http.Error(w, "append: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	n := notes.Note{
+		MessageID: mid,
+		AuthorID:  u.ID,
+		Title:     title,
+		BodyMD:    body,
+		Tags:      r.FormValue("tags"),
+	}
+	if err := a.NotesRepo.Upsert(r.Context(), n); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	row, _ := a.NotesRepo.FindByMessageID(r.Context(), mid)
+	http.Redirect(w, r, "/notes/"+row.ID, http.StatusSeeOther)
+}
+
+func (a *App) noteShow(w http.ResponseWriter, r *http.Request) {
+	u := auth.CurrentUser(r)
+	id := chi.URLParam(r, "id")
+	n, err := a.NotesRepo.FindByID(r.Context(), id)
+	if err != nil {
+		http.Error(w, "not found", http.StatusNotFound)
+		return
+	}
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	_ = render.NoteEditor(u.DisplayName, a.navCounts(r.Context()), render.NoteEdit{
+		ID: n.ID, Title: n.Title, BodyMD: n.BodyMD, Pinned: n.Pinned, Tags: n.Tags,
+	}).Render(r.Context(), w)
+}
+
+func (a *App) noteSave(w http.ResponseWriter, r *http.Request) {
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "bad form", http.StatusBadRequest)
+		return
+	}
+	u := auth.CurrentUser(r)
+	id := chi.URLParam(r, "id")
+	old, err := a.NotesRepo.FindByID(r.Context(), id)
+	if err != nil {
+		http.Error(w, "not found", http.StatusNotFound)
+		return
+	}
+	title := strings.TrimSpace(r.FormValue("title"))
+	body := r.FormValue("body_md")
+	// Find root original MID (first version).
+	origMID := old.MessageID
+	mid, raw, err := notes.BuildNoteMessage(u.Email, u.DisplayName, title, body, origMID, 2)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if err := a.MailboxSvc.EditNoteAppendExpunge(r.Context(), a.Cfg.IMAPNotesFolder, old.UID, raw); err != nil {
+		http.Error(w, "edit: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	_ = a.NotesRepo.MarkSuperseded(r.Context(), old.MessageID, mid)
+	_ = a.NotesRepo.Upsert(r.Context(), notes.Note{
+		MessageID: mid,
+		AuthorID:  u.ID,
+		Title:     title,
+		BodyMD:    body,
+		Tags:      r.FormValue("tags"),
+		Pinned:    old.Pinned,
+	})
+	row, _ := a.NotesRepo.FindByMessageID(r.Context(), mid)
+	http.Redirect(w, r, "/notes/"+row.ID, http.StatusSeeOther)
+}
+
+func (a *App) notePin(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	pinned := r.FormValue("pinned") == "true"
+	n, err := a.NotesRepo.FindByID(r.Context(), id)
+	if err != nil {
+		http.Error(w, "not found", http.StatusNotFound)
+		return
+	}
+	if err := a.MailboxSvc.KeywordSet(r.Context(), a.Cfg.IMAPNotesFolder, n.UID, notes.KeywordPinned, pinned); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	_ = a.NotesRepo.SetPinned(r.Context(), id, pinned)
+	http.Redirect(w, r, "/notes/"+id, http.StatusSeeOther)
+}
+
+func (a *App) noteDelete(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	n, err := a.NotesRepo.FindByID(r.Context(), id)
+	if err != nil {
+		http.Error(w, "not found", http.StatusNotFound)
+		return
+	}
+	// Move IMAP message to Trash
+	_ = a.MailboxSvc.MoveTo(r.Context(), n.ID, a.Cfg.IMAPTrashFolder)
+	_ = a.NotesRepo.HardDelete(r.Context(), n.ID)
+	http.Redirect(w, r, "/notes", http.StatusSeeOther)
+}
+
+// --- settings ---
+
+func (a *App) settings(w http.ResponseWriter, r *http.Request) {
+	u := auth.CurrentUser(r)
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	_ = render.Settings(u.DisplayName, a.navCounts(r.Context()), render.SettingsView{
+		IMAPHost: a.Cfg.IMAPHost, IMAPPort: a.Cfg.IMAPPort, IMAPUser: a.Cfg.IMAPUsername, IMAPTLS: a.Cfg.IMAPTLS,
+		SMTPHost: a.Cfg.SMTPHost, SMTPPort: a.Cfg.SMTPPort, SMTPUser: a.Cfg.SMTPUsername, SMTPTLS: a.Cfg.SMTPTLS,
+		NotesFolder: a.Cfg.IMAPNotesFolder,
+	}).Render(r.Context(), w)
+}
+
+var _ = strconv.Itoa

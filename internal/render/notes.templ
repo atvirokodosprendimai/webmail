@@ -1,0 +1,125 @@
+package render
+
+import "time"
+
+type NoteRow struct {
+	ID       string
+	Title    string
+	Preview  string
+	Pinned   bool
+	UpdatedAt time.Time
+}
+
+templ NotesIndex(displayName string, counts NavCounts, rows []NoteRow) {
+	@Base("ORBITAL // notes") {
+		<main class="shell">
+			@Shell("notes", counts, displayName) {
+				<section class="list">
+					<header class="list__head">
+						<div class="list__head-row">
+							<div>
+								<span class="list__title">Notes</span>
+								<span class="list__title-count">/ { pad2(len(rows)) }</span>
+							</div>
+							<a href="/notes/new" class="btn btn--primary">+ new</a>
+						</div>
+					</header>
+					<div class="list__rows">
+						for _, n := range rows {
+							<a href={ templ.URL("/notes/" + n.ID) } class="row">
+								<div class="row__rail">
+									if n.Pinned {
+										<span class="dot is-priority"></span>
+									} else {
+										<span class="dot"></span>
+									}
+								</div>
+								<div class="row__main">
+									<div class="row__subject">{ n.Title }</div>
+									<div class="row__snippet">{ n.Preview }</div>
+								</div>
+								<div class="row__when mono">{ n.UpdatedAt.Format("Jan 02 15:04") }</div>
+							</a>
+						}
+						if len(rows) == 0 {
+							<div style="padding:var(--u4);color:var(--ink-mute);font-family:var(--font-mono);">◇ no notes yet</div>
+						}
+					</div>
+				</section>
+				<section class="reader">
+					<div style="padding:var(--u5);color:var(--ink-mute);font-family:var(--font-mono);">
+						◇ select or create a note
+					</div>
+				</section>
+			}
+		</main>
+	}
+}
+
+type NoteEdit struct {
+	ID      string // empty for /new
+	Title   string
+	BodyMD  string
+	Pinned  bool
+	Tags    string
+}
+
+templ NoteEditor(displayName string, counts NavCounts, n NoteEdit) {
+	@Base("ORBITAL // note") {
+		<main class="shell">
+			@Shell("notes", counts, displayName) {
+				<section class="reader" style="grid-column: span 2;">
+					<header class="reader__head">
+						<div>
+							<div class="mega plasma">◇ NOTE</div>
+							if n.ID == "" {
+								<h1 class="reader__subject">New note</h1>
+							} else {
+								<h1 class="reader__subject">{ n.Title }</h1>
+							}
+						</div>
+						if n.ID != "" {
+							<div class="reader__actions">
+								<form method="post" action={ templ.URL("/notes/" + n.ID + "/pin") } style="display:inline;">
+									<input type="hidden" name="pinned" value={ boolStr(!n.Pinned) }/>
+									<button class="btn btn--sm" type="submit">
+										if n.Pinned {
+											Unpin
+										} else {
+											Pin
+										}
+									</button>
+								</form>
+								<form method="post" action={ templ.URL("/notes/" + n.ID + "/delete") } style="display:inline;">
+									<button class="btn btn--sm btn--danger" type="submit">Delete</button>
+								</form>
+							</div>
+						}
+					</header>
+					<form method="post" action={ noteSaveURL(n.ID) } style="display:flex;flex-direction:column;gap:var(--u2);">
+						<input class="input" type="text" name="title" value={ n.Title } placeholder="title" required/>
+						<input class="input" type="text" name="tags" value={ n.Tags } placeholder="tag1 tag2 (space-separated)"/>
+						<textarea class="input" name="body_md" rows="22" placeholder="# markdown body" required>{ n.BodyMD }</textarea>
+						<div style="display:flex;justify-content:flex-end;gap:var(--u);">
+							<a href="/notes" class="btn btn--ghost">Back</a>
+							<button type="submit" class="btn btn--primary">
+								if n.ID == "" {
+									Create
+								} else {
+									Save
+								}
+							</button>
+						</div>
+					</form>
+				</section>
+			}
+		</main>
+	}
+}
+
+func noteSaveURL(id string) templ.SafeURL {
+	if id == "" {
+		return templ.URL("/notes")
+	}
+	return templ.URL("/notes/" + id)
+}

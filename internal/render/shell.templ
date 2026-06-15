@@ -1,0 +1,112 @@
+package render
+
+// NavCounts wraps the unread/total counters shown in the side nav.
+type NavCounts struct {
+	InboxUnread int
+	InboxTotal  int
+	Sent        int
+	Drafts      int
+}
+
+// Shell wraps the shared rail+nav around a page body.
+templ Shell(activeFolder string, counts NavCounts, displayName string) {
+	<aside class="rail">
+		<div class="rail__brand"><div class="rail__brand-mark">OR</div></div>
+		<a href="/inbox" class={ "rail__item", templ.KV("is-active", activeFolder == "inbox") } title="Inbox">
+			<svg class="icn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 8h18M5 4h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Z"/></svg>
+		</a>
+		<a href="/compose" class={ "rail__item", templ.KV("is-active", activeFolder == "compose") } title="Compose">
+			<svg class="icn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+		</a>
+		<a href="/notes" class={ "rail__item", templ.KV("is-active", activeFolder == "notes") } title="Notes">
+			<svg class="icn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="15" y2="17"/></svg>
+		</a>
+		<a href="/projects" class={ "rail__item", templ.KV("is-active", activeFolder == "projects") } title="Projects">
+			<svg class="icn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+		</a>
+		<div class="rail__spacer"></div>
+		<a href="/settings" class={ "rail__item", templ.KV("is-active", activeFolder == "settings") } title="Settings">
+			<svg class="icn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="3"/></svg>
+		</a>
+		<div class="rail__avatar">{ initialOf(displayName) }</div>
+	</aside>
+	<nav class="nav">
+		<div class="nav__head">
+			<div class="nav__head-row">
+				<h1>Orbital</h1>
+			</div>
+			<div class="mono" style="font-size: var(--size-2xs); color: var(--ink-mute); display: flex; gap: var(--u2);">
+				<span class="dot is-live"></span>
+				<span>signal locked</span>
+			</div>
+		</div>
+		<a href="/compose" class="nav__compose">
+			<span>+ transmit</span>
+			<span class="shortcut">⌘ N</span>
+		</a>
+		<div class="nav__section">channels</div>
+		<ul class="nav__list">
+			<li>
+				<a href="/inbox" class={ "nav__link", templ.KV("is-active", activeFolder == "inbox") }>
+					<span>Inbox</span>
+					if counts.InboxUnread > 0 {
+						<span class="count">{ pad2(counts.InboxUnread) }</span>
+					}
+				</a>
+			</li>
+			<li><a href="/folder/sent" class="nav__link"><span>Sent</span></a></li>
+			<li><a href="/folder/drafts" class="nav__link"><span>Drafts</span></a></li>
+			<li><a href="/folder/archive" class="nav__link"><span>Archive</span></a></li>
+			<li><a href="/folder/trash" class="nav__link"><span>Trash</span></a></li>
+		</ul>
+		<div class="nav__section">workspace</div>
+		<ul class="nav__list">
+			<li><a href="/projects" class={ "nav__link", templ.KV("is-active", activeFolder == "projects") }><span>Projects</span></a></li>
+			<li><a href="/notes" class={ "nav__link", templ.KV("is-active", activeFolder == "notes") }><span>Notes</span></a></li>
+		</ul>
+		<div class="nav__footer">
+			<div class="nav__footer-row">
+				<span>◇ orbital v0.1</span>
+				<span class="lime">● live</span>
+			</div>
+		</div>
+	</nav>
+	{ children... }
+}
+
+func initialOf(s string) string {
+	if len(s) == 0 {
+		return "·"
+	}
+	return string([]rune(s)[0])
+}
+
+func pad2(n int) string {
+	if n < 10 {
+		return "0" + itoa(n)
+	}
+	return itoa(n)
+}
+
+func itoa(n int) string {
+	if n == 0 {
+		return "0"
+	}
+	neg := false
+	if n < 0 {
+		neg = true
+		n = -n
+	}
+	var buf [20]byte
+	i := len(buf)
+	for n > 0 {
+		i--
+		buf[i] = byte('0' + n%10)
+		n /= 10
+	}
+	if neg {
+		i--
+		buf[i] = '-'
+	}
+	return string(buf[i:])
+}

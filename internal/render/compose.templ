@@ -1,0 +1,51 @@
+package render
+
+type ComposePrefill struct {
+	To       string
+	Cc       string
+	Subject  string
+	Body     string
+	ReplyTo  string // ingest id (for STORE +\Answered on send)
+}
+
+templ Compose(displayName string, counts NavCounts, p ComposePrefill, errMsg string) {
+	@Base("ORBITAL // compose") {
+		<main class="shell">
+			@Shell("compose", counts, displayName) {
+				<section class="reader" style="grid-column: span 2;">
+					<header class="reader__head">
+						<div>
+							<div class="mega plasma">▶ NEW TRANSMISSION</div>
+							<h1 class="reader__subject">Compose</h1>
+						</div>
+					</header>
+					if errMsg != "" {
+						<div style="color:var(--priority);font-family:var(--font-mono);font-size:var(--size-xs);">◇ { errMsg }</div>
+					}
+					<form method="post" action="/compose/send" style="display:flex;flex-direction:column;gap:var(--u2);">
+						if p.ReplyTo != "" {
+							<input type="hidden" name="reply_to" value={ p.ReplyTo }/>
+						}
+						<div style="display:grid;grid-template-columns:80px 1fr;align-items:center;border-bottom:1px solid var(--hairline);">
+							<span class="mega">TO</span>
+							<input class="input" type="text" name="to" placeholder="recipient@example.com, …" value={ p.To } required/>
+						</div>
+						<div style="display:grid;grid-template-columns:80px 1fr;align-items:center;border-bottom:1px solid var(--hairline);">
+							<span class="mega">CC</span>
+							<input class="input" type="text" name="cc" placeholder="cc@example.com, …" value={ p.Cc }/>
+						</div>
+						<div style="display:grid;grid-template-columns:80px 1fr;align-items:center;border-bottom:1px solid var(--hairline);">
+							<span class="mega">SUBJ</span>
+							<input class="input" type="text" name="subject" value={ p.Subject } required/>
+						</div>
+						<textarea class="input" name="body" rows="14" required>{ p.Body }</textarea>
+						<div style="display:flex;justify-content:flex-end;gap:var(--u);">
+							<a href="/inbox" class="btn btn--ghost">Discard</a>
+							<button type="submit" class="btn btn--primary">Transmit →</button>
+						</div>
+					</form>
+				</section>
+			}
+		</main>
+	}
+}
