@@ -9,3 +9,4 @@
 - 2026-06-15 `5330d56` fix(imap): auto-CREATE folder on APPEND TRYCREATE
 - 2026-06-15 `d04bb95` fix(imap): decode RFC 2047 encoded-words (iso-8859-2, windows-1257, ...)
 - 2026-06-15 `d04bb95` fix(imap): decode RFC 2047 encoded-words (iso-8859-2, windows-1257, ...)
+- 2026-06-15 `b486d14` fix: persistent sessions + RFC 5322 From + Sent/Drafts folder view

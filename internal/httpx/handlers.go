@@ -356,20 +356,25 @@ func (a *App) composeSend(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "build: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
+	rcpts := append(append([]string{}, cmd.To...), cmd.Cc...)
+	slog.Info("smtp send begin",
+		"to", rcpts, "subject", cmd.Subject,
+		"header_from", cmd.From, "envelope_from", a.Cfg.SMTPUsername,
+		"bytes", len(raw),
+	)
 	if err := send.Send(send.Config{
 		Host: a.Cfg.SMTPHost, Port: a.Cfg.SMTPPort, TLSMode: a.Cfg.SMTPTLS,
 		Username: a.Cfg.SMTPUsername, Password: a.Cfg.SMTPPassword,
-	}, cmd.From, append(cmd.To, cmd.Cc...), raw); err != nil {
-		slog.Error("smtp send", "err", err)
+	}, a.Cfg.SMTPUsername, rcpts, raw); err != nil {
+		slog.Error("smtp send failed", "err", err, "to", rcpts)
 		http.Error(w, "smtp: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	// APPEND to Sent + STORE +\Answered. Failure is non-fatal but logged
-	// (TRYCREATE auto-fix lives in the imap wrapper).
+	slog.Info("smtp send ok", "to", rcpts)
 	if rerr := a.MailboxSvc.Reply(r.Context(), replyTo, a.Cfg.IMAPSentFolder, raw); rerr != nil {
 		slog.Warn("imap append to Sent failed (mail still sent)", "err", rerr)
 	}
-	http.Redirect(w, r, "/inbox", http.StatusSeeOther)
+	http.Redirect(w, r, "/inbox?sent=1", http.StatusSeeOther)
 }
 
 // formatFrom returns an RFC 5322 address-with-display-name. Uses
@@ -422,18 +427,24 @@ func (a *App) threadReply(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "build: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
+	slog.Info("smtp reply begin",
+		"to", cmd.To, "subject", cmd.Subject,
+		"header_from", cmd.From, "envelope_from", a.Cfg.SMTPUsername,
+		"bytes", len(raw),
+	)
 	if err := send.Send(send.Config{
 		Host: a.Cfg.SMTPHost, Port: a.Cfg.SMTPPort, TLSMode: a.Cfg.SMTPTLS,
 		Username: a.Cfg.SMTPUsername, Password: a.Cfg.SMTPPassword,
-	}, cmd.From, cmd.To, raw); err != nil {
-		slog.Error("smtp reply", "err", err)
+	}, a.Cfg.SMTPUsername, cmd.To, raw); err != nil {
+		slog.Error("smtp reply failed", "err", err, "to", cmd.To)
 		http.Error(w, "smtp: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
+	slog.Info("smtp reply ok", "to", cmd.To)
 	if rerr := a.MailboxSvc.Reply(r.Context(), id, a.Cfg.IMAPSentFolder, raw); rerr != nil {
 		slog.Warn("imap append to Sent failed (mail still sent)", "err", rerr)
 	}
-	http.Redirect(w, r, "/thread/"+id, http.StatusSeeOther)
+	http.Redirect(w, r, "/thread/"+id+"?sent=1", http.StatusSeeOther)
 }
 
 // --- projects ---
