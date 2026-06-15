@@ -96,8 +96,8 @@ func (a *App) fetchInboxRows(ctx context.Context, limit int) ([]render.InboxRow,
 		snip = strings.ReplaceAll(snip, "\n", " ")
 		out = append(out, render.InboxRow{
 			IngestID:   r.ID,
-			Subject:    r.Subject,
-			FromName:   r.FromName,
+			Subject:    mailbox.DecodeHeader(r.Subject),
+			FromName:   mailbox.DecodeHeader(r.FromName),
 			FromAddr:   r.FromAddr,
 			Snippet:    snip,
 			ReceivedAt: r.ReceivedAt,
@@ -181,9 +181,9 @@ func (a *App) thread(w http.ResponseWriter, r *http.Request) {
 		}
 		msgs = append(msgs, render.ThreadMessage{
 			IngestID:    m.ID,
-			FromName:    m.FromName,
+			FromName:    mailbox.DecodeHeader(m.FromName),
 			FromAddr:    m.FromAddr,
-			Subject:     m.Subject,
+			Subject:     mailbox.DecodeHeader(m.Subject),
 			BodyText:    m.BodyText,
 			BodyHTML:    m.BodyHTML,
 			ReceivedAt:  m.ReceivedAt,
@@ -208,7 +208,7 @@ func (a *App) thread(w http.ResponseWriter, r *http.Request) {
 	}
 	subject := "(no subject)"
 	if len(msgs) > 0 && msgs[0].Subject != "" {
-		subject = msgs[0].Subject
+		subject = mailbox.DecodeHeader(msgs[0].Subject)
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	_ = render.Thread(u.DisplayName, a.navCounts(r.Context()), subject, msgs, opts, tagged).Render(r.Context(), w)

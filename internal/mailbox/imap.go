@@ -4,13 +4,36 @@ import (
 	"crypto/tls"
 	"errors"
 	"fmt"
+	"mime"
 	"strconv"
 	"strings"
 	"time"
 
+	gmcharset "github.com/emersion/go-message/charset"
 	"github.com/emersion/go-imap/v2"
 	"github.com/emersion/go-imap/v2/imapclient"
 )
+
+// wordDecoder decodes RFC 2047 encoded-words (e.g.
+// `=?iso-8859-2?Q?Mindaugas_=AEvirblis?=` → `Mindaugas Žvirblis`) using
+// the full charset.Reader chain (handles Lithuanian windows-1257,
+// iso-8859-13, etc.). Wired into imapclient.Options so envelope From
+// names and Subjects come back already-decoded.
+var wordDecoder = &mime.WordDecoder{CharsetReader: gmcharset.Reader}
+
+// DecodeHeader is the public belt-and-braces decoder used by render
+// layer for rows ingested before the WordDecoder wiring landed. Idempotent
+// on already-decoded strings.
+func DecodeHeader(s string) string {
+	if !strings.Contains(s, "=?") {
+		return s
+	}
+	out, err := wordDecoder.DecodeHeader(s)
+	if err != nil || out == "" {
+		return s
+	}
+	return out
+}
 
 // imapClient is the SINGLE file in the codebase allowed to call
 // imapclient.* — every other layer goes through these methods.
@@ -38,17 +61,17 @@ func dial(cfg AccountConfig) (*imapClient, error) {
 		c   *imapclient.Client
 		err error
 	)
+	opts := &imapclient.Options{
+		TLSConfig:   &tls.Config{ServerName: cfg.Host},
+		WordDecoder: wordDecoder,
+	}
 	switch strings.ToLower(cfg.TLSMode) {
 	case "", "tls":
-		c, err = imapclient.DialTLS(addr, &imapclient.Options{
-			TLSConfig: &tls.Config{ServerName: cfg.Host},
-		})
+		c, err = imapclient.DialTLS(addr, opts)
 	case "starttls":
-		c, err = imapclient.DialStartTLS(addr, &imapclient.Options{
-			TLSConfig: &tls.Config{ServerName: cfg.Host},
-		})
+		c, err = imapclient.DialStartTLS(addr, opts)
 	case "none":
-		c, err = imapclient.DialInsecure(addr, nil)
+		c, err = imapclient.DialInsecure(addr, &imapclient.Options{WordDecoder: wordDecoder})
 	default:
 		return nil, fmt.Errorf("imap: unknown tls mode %q", cfg.TLSMode)
 	}
