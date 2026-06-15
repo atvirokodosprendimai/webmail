@@ -22,3 +22,4 @@
 - 2026-06-15 `c9383a3` ui: drop empty reader pane from inbox + notes list views
 - 2026-06-15 `6d379e4` ops: docker compose.yml + healthcheck subcommand + ghcr workflow
 - 2026-06-15 `691dc52` chore: changelog + claude-mem placeholders
+- 2026-06-15 `e38776e` chore: claude-mem placeholder in internal/uploads
