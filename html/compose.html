@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ORBITAL // compose</title>
+<link rel="stylesheet" href="./styles/tokens.css" />
+<link rel="stylesheet" href="./styles/base.css" />
+<link rel="stylesheet" href="./styles/shell.css" />
+<link rel="stylesheet" href="./styles/components.css" />
+<link rel="stylesheet" href="./styles/pages.css" />
+</head>
+<body>
+<main class="shell shell--compose">
+
+  <!-- RAIL -->
+  <aside class="rail">
+    <div class="rail__brand"><div class="rail__brand-mark">OR</div></div>
+    <a href="./inbox.html" class="rail__item" title="Inbox">
+      <svg class="icn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 8h18M5 4h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Z"/></svg>
+    </a>
+    <a href="./compose.html" class="rail__item is-active" title="Compose">
+      <svg class="icn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+    </a>
+    <a href="./thread.html" class="rail__item" title="Threads">
+      <svg class="icn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2Z"/></svg>
+    </a>
+    <div class="rail__spacer"></div>
+    <a href="./settings.html" class="rail__item" title="Settings">
+      <svg class="icn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="3"/><path d="M12 1v6m0 10v6m11-11h-6M7 12H1"/></svg>
+    </a>
+    <a href="./index.html" class="rail__item" title="Design"><svg class="icn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg></a>
+    <div class="rail__avatar">M</div>
+  </aside>
+
+  <!-- NAV (abbreviated) -->
+  <nav class="nav">
+    <div class="nav__head">
+      <div class="nav__head-row">
+        <h1>Compose</h1>
+        <span class="coord">draft · 03</span>
+      </div>
+      <div class="mono" style="font-size: var(--size-2xs); color: var(--ink-mute);">autosaved · 12s ago</div>
+    </div>
+
+    <a href="./compose.html" class="nav__compose">
+      <span>+ new draft</span>
+      <span class="shortcut">⌘ N</span>
+    </a>
+
+    <div class="nav__section">drafts</div>
+    <ul class="nav__list">
+      <li><a href="#" class="nav__link is-active">
+        <span class="nav__label-dot" style="background: var(--plasma);"></span>
+        <span>Re: orbital telemetry…</span>
+        <span class="count">now</span>
+      </a></li>
+      <li><a href="#" class="nav__link">
+        <span class="nav__label-dot" style="background: var(--ink-faint);"></span>
+        <span>Q3 budget review</span>
+        <span class="count">2d</span>
+      </a></li>
+      <li><a href="#" class="nav__link">
+        <span class="nav__label-dot" style="background: var(--ink-faint);"></span>
+        <span>Untitled draft</span>
+        <span class="count">6d</span>
+      </a></li>
+    </ul>
+
+    <div class="nav__section">templates</div>
+    <ul class="nav__list">
+      <li><a href="#" class="nav__link"><span>◇ Status update</span></a></li>
+      <li><a href="#" class="nav__link"><span>◇ Meeting follow-up</span></a></li>
+      <li><a href="#" class="nav__link"><span>◇ Decline politely</span></a></li>
+      <li><a href="#" class="nav__link"><span>◇ Out of office</span></a></li>
+    </ul>
+
+    <div class="nav__footer">
+      <div class="nav__footer-row"><span>character count</span><span class="plasma">847</span></div>
+      <div class="nav__footer-row"><span>est. read time</span><span>00:42</span></div>
+      <div class="nav__bar"><div class="nav__bar-fill" style="width: 12%;"></div></div>
+    </div>
+  </nav>
+
+  <!-- COMPOSE -->
+  <section class="compose">
+    <header class="compose__topbar">
+      <div class="compose__title">draft · transmission</div>
+      <div class="compose__actions">
+        <button class="btn btn--sm btn--ghost">Save & close</button>
+        <button class="btn btn--sm btn--ghost">Discard</button>
+        <button class="btn btn--icon btn--ghost" title="Minimize"><svg class="icn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5 12h14"/></svg></button>
+      </div>
+    </header>
+
+    <div class="compose__layout">
+      <!-- main editor -->
+      <div class="compose__form">
+
+        <div class="compose__field">
+          <span class="compose__field-label">to</span>
+          <div class="compose__recipients">
+            <span class="recipient">
+              <div class="av av--plasma av--sm">YO</div>
+              Yara Okonkwo
+              <span class="recipient__close">×</span>
+            </span>
+            <input class="compose__field-input" placeholder="add recipient…" style="flex: 1; min-width: 200px;" />
+          </div>
+        </div>
+
+        <div class="compose__field">
+          <span class="compose__field-label">cc</span>
+          <div class="compose__recipients">
+            <span class="recipient">
+              <div class="av av--solar av--sm">JM</div>
+              Juno Marlowe
+              <span class="recipient__close">×</span>
+            </span>
+            <span class="recipient">
+              <div class="av av--violet av--sm">QS</div>
+              Quinn Sato
+              <span class="recipient__close">×</span>
+            </span>
+            <input class="compose__field-input" placeholder="add cc…" style="flex: 1; min-width: 160px;" />
+          </div>
+        </div>
+
+        <div class="compose__field">
+          <span class="compose__field-label">subj</span>
+          <input class="compose__field-input" value="Re: orbital telemetry sync — Q3" />
+        </div>
+
+        <div class="compose__editor">
+          <div class="compose__editor-tools">
+            <button class="tool-btn is-active" title="Bold">B</button>
+            <button class="tool-btn" title="Italic" style="font-style: italic;">I</button>
+            <button class="tool-btn" title="Underline" style="text-decoration: underline;">U</button>
+            <button class="tool-btn" title="Strike" style="text-decoration: line-through;">S</button>
+            <span class="tool-divider"></span>
+            <button class="tool-btn" title="Heading">H</button>
+            <button class="tool-btn" title="Quote">"</button>
+            <button class="tool-btn" title="Code">{}</button>
+            <button class="tool-btn" title="Link">⌘L</button>
+            <span class="tool-divider"></span>
+            <button class="tool-btn" title="List">≣</button>
+            <button class="tool-btn" title="Numbered">1.</button>
+            <span class="tool-divider"></span>
+            <button class="tool-btn" title="Attach">⊕</button>
+            <button class="tool-btn" title="Emoji">☉</button>
+          </div>
+
+          <textarea class="compose__textarea" placeholder="begin transmission…">Yara —
+
+Quick note while it's fresh. The shift you flagged tracks with what Quinn was modeling last week — the axis alignment matches sector 7 within a degree. I'd push the cross-check tonight rather than wait. If it lines up we have our answer before the 09:00; if it doesn't, we'll have at least narrowed the search.
+
+Pulling probe 14 logs now. Will forward whatever's still on the buffer in a separate message — call it 30 minutes.
+
+Also — the magnitude is the part I want to flag explicitly to mission-ops. 1.6× the Q1 baseline is past where I'd want a passive watch. Suggest we move sector 4 to active monitoring through the rest of the quarter even if the cross-check comes back clean.
+
+— M</textarea>
+        </div>
+
+        <div style="display: flex; gap: var(--u2); padding: var(--u3) 0; flex-wrap: wrap;">
+          <span class="mega" style="margin-right: var(--u2);">◇ attached · 02</span>
+          <span class="recipient">
+            <span class="mono" style="color: var(--solar); font-size: var(--size-2xs);">PDF</span>
+            probe-14_buffer.pdf
+            <span class="recipient__close">×</span>
+          </span>
+          <span class="recipient">
+            <span class="mono" style="color: var(--plasma); font-size: var(--size-2xs);">CSV</span>
+            sector-7_rolling.csv
+            <span class="recipient__close">×</span>
+          </span>
+        </div>
+      </div>
+
+      <!-- aside -->
+      <aside class="compose__aside">
+        <div class="aside-block">
+          <div class="aside-block__title">
+            <span>◇ TRANSMISSION</span>
+            <span class="lime">● live</span>
+          </div>
+          <div class="aside-block__body">
+            Encrypted outbound · RSA-4096<br />
+            Signed · ed25519 · M / orbital
+          </div>
+        </div>
+
+        <div class="aside-block">
+          <div class="aside-block__title">
+            <span>◇ schedule</span>
+          </div>
+          <div class="aside-block__body" style="margin-bottom: var(--u3);">
+            Send immediately on transmit, or queue for optimal delivery window.
+          </div>
+          <ul class="aside-block__list">
+            <li><span>Send now</span><span class="plasma">●</span></li>
+            <li><span>Morning · 08:00</span><span>→</span></li>
+            <li><span>End of day · 17:00</span><span>→</span></li>
+            <li><span>Custom window</span><span>→</span></li>
+          </ul>
+        </div>
+
+        <div class="aside-block">
+          <div class="aside-block__title">
+            <span>◇ recipients · 03</span>
+          </div>
+          <ul class="aside-block__list">
+            <li><span>Yara Okonkwo</span><span class="lime">● live</span></li>
+            <li><span>Juno Marlowe</span><span class="muted">idle</span></li>
+            <li><span>Quinn Sato</span><span class="muted">idle</span></li>
+          </ul>
+        </div>
+
+        <div class="aside-block">
+          <div class="aside-block__title">◇ thread context</div>
+          <div class="aside-block__body" style="font-size: var(--size-xs);">
+            04 of 12 messages · sector-ops<br />
+            <span class="muted">last activity 02:47 · 4 participants</span>
+          </div>
+        </div>
+      </aside>
+    </div>
+
+    <footer class="compose__footer">
+      <div class="compose__schedule">
+        <span class="dot is-plasma"></span>
+        <span>autosaved · 12s ago · 847 chars</span>
+      </div>
+      <div class="compose__send">
+        <button class="btn">Save draft</button>
+        <button class="btn btn--icon" title="Schedule">
+          <svg class="icn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+        </button>
+        <button class="btn btn--primary">
+          Transmit
+          <svg class="icn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M22 2 11 13M22 2l-7 20-4-9-9-4Z"/></svg>
+        </button>
+      </div>
+    </footer>
+  </section>
+
+</main>
+</body>
+</html>

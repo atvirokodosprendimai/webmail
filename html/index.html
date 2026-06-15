@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ORBITAL // mail terminal — design system</title>
+<link rel="stylesheet" href="./styles/tokens.css" />
+<link rel="stylesheet" href="./styles/base.css" />
+<link rel="stylesheet" href="./styles/shell.css" />
+<link rel="stylesheet" href="./styles/components.css" />
+<link rel="stylesheet" href="./styles/pages.css" />
+</head>
+<body>
+<main class="shell shell--showcase">
+  <div class="showcase">
+
+    <!-- HERO -->
+    <header class="showcase__hero">
+      <div>
+        <div class="showcase__eyebrow">
+          <span>◇ ORBITAL // 00.SYS // build 2087.06</span>
+        </div>
+        <h1 class="showcase__title">
+          Mail at <em>terminal velocity.</em><br />
+          A design system for inboxes that<br />don't feel like inboxes.
+        </h1>
+        <p class="showcase__lede">
+          ORBITAL is a futuristic operating layer for electronic mail — built on blueprint paper chromatics,
+          monospaced precision, and a typography pair (Syne × JetBrains Mono) that treats every message
+          like inbound telemetry. Six surfaces. One language. Zero clutter.
+        </p>
+      </div>
+      <div class="showcase__metrics">
+        <div class="metric">
+          <div class="metric__label">latency</div>
+          <div class="metric__value">12<span style="color:var(--ink-mute);font-size:var(--size-md);">ms</span></div>
+          <div class="metric__sub">render → paint</div>
+        </div>
+        <div class="metric">
+          <div class="metric__label">surfaces</div>
+          <div class="metric__value">05</div>
+          <div class="metric__sub">core flows</div>
+        </div>
+        <div class="metric">
+          <div class="metric__label">tokens</div>
+          <div class="metric__value">68</div>
+          <div class="metric__sub">design primitives</div>
+        </div>
+        <div class="metric">
+          <div class="metric__label">payload</div>
+          <div class="metric__value">0<span style="color:var(--ink-mute);font-size:var(--size-md);">kb js</span></div>
+          <div class="metric__sub">html + css only</div>
+        </div>
+      </div>
+    </header>
+
+    <!-- COLOR -->
+    <section class="showcase__block">
+      <div class="showcase__block-head">
+        <div>
+          <div class="showcase__block-num">01 // chromatics</div>
+        </div>
+        <div>
+          <h2 class="showcase__block-title">Palette on paper.</h2>
+          <p class="showcase__block-desc">
+            A warm cream substrate punctuated by deep teal, coral red, mustard, and olive. Signal-rich, fatigue-low. Reserve hot colors for state — never decoration.
+          </p>
+        </div>
+      </div>
+      <div class="showcase__panel">
+        <div class="swatch-grid">
+          <div class="swatch">
+            <div class="swatch__color" data-hex="#F4F1EA" style="background: var(--void);"></div>
+            <div class="swatch__meta"><span class="swatch__name">void</span><span class="swatch__role">substrate</span></div>
+          </div>
+          <div class="swatch">
+            <div class="swatch__color" data-hex="#EDE9DC" style="background: var(--hull);"></div>
+            <div class="swatch__meta"><span class="swatch__name">hull</span><span class="swatch__role">surface 1</span></div>
+          </div>
+          <div class="swatch">
+            <div class="swatch__color" data-hex="#FBF8F0" style="background: var(--deck);"></div>
+            <div class="swatch__meta"><span class="swatch__name">deck</span><span class="swatch__role">surface 2</span></div>
+          </div>
+          <div class="swatch">
+            <div class="swatch__color" data-hex="#006B5F" style="background: var(--plasma); color: var(--void);"></div>
+            <div class="swatch__meta"><span class="swatch__name plasma">plasma</span><span class="swatch__role">primary</span></div>
+          </div>
+          <div class="swatch">
+            <div class="swatch__color" data-hex="#C8413B" style="background: var(--priority); color: var(--void);"></div>
+            <div class="swatch__meta"><span class="swatch__name priority">priority</span><span class="swatch__role">urgent</span></div>
+          </div>
+          <div class="swatch">
+            <div class="swatch__color" data-hex="#B87420" style="background: var(--solar); color: var(--void);"></div>
+            <div class="swatch__meta"><span class="swatch__name solar">solar</span><span class="swatch__role">attention</span></div>
+          </div>
+          <div class="swatch">
+            <div class="swatch__color" data-hex="#4A7A1C" style="background: var(--lime); color: var(--void);"></div>
+            <div class="swatch__meta"><span class="swatch__name lime">lime</span><span class="swatch__role">live now</span></div>
+          </div>
+          <div class="swatch">
+            <div class="swatch__color" data-hex="#4A3DAD" style="background: var(--violet); color: var(--void);"></div>
+            <div class="swatch__meta"><span class="swatch__name" style="color:var(--violet);">violet</span><span class="swatch__role">tertiary</span></div>
+          </div>
+          <div class="swatch">
+            <div class="swatch__color" data-hex="#0C0E16" style="background: var(--ink); color: var(--void);"></div>
+            <div class="swatch__meta"><span class="swatch__name">ink</span><span class="swatch__role">text/100</span></div>
+          </div>
+          <div class="swatch">
+            <div class="swatch__color" data-hex="#2A2D3D" style="background: var(--ink-soft); color: var(--void);"></div>
+            <div class="swatch__meta"><span class="swatch__name">ink·soft</span><span class="swatch__role">text/80</span></div>
+          </div>
+          <div class="swatch">
+            <div class="swatch__color" data-hex="#5C6076" style="background: var(--ink-mute); color: var(--void);"></div>
+            <div class="swatch__meta"><span class="swatch__name">ink·mute</span><span class="swatch__role">text/60</span></div>
+          </div>
+          <div class="swatch">
+            <div class="swatch__color" data-hex="#B5AC93" style="background: var(--rim);"></div>
+            <div class="swatch__meta"><span class="swatch__name">rim</span><span class="swatch__role">divider</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TYPOGRAPHY -->
+    <section class="showcase__block">
+      <div class="showcase__block-head">
+        <div>
+          <div class="showcase__block-num">02 // typography</div>
+        </div>
+        <div>
+          <h2 class="showcase__block-title">Syne × JetBrains Mono.</h2>
+          <p class="showcase__block-desc">
+            One geometric futurist serif. One technical mono. The tension between editorial confidence and engineering precision defines every interface.
+          </p>
+        </div>
+      </div>
+      <div class="showcase__panel">
+        <div class="type-spec">
+          <div class="type-spec__meta">
+            <strong>Display / 5XL</strong>
+            Syne · 800<br />
+            -0.04em tracking
+          </div>
+          <div class="type-spec__sample">
+            <div style="font-family: var(--font-display); font-size: var(--size-5xl); font-weight: 800; letter-spacing: -0.04em; line-height: 0.9;">Inbound transmission.</div>
+          </div>
+        </div>
+        <div class="type-spec">
+          <div class="type-spec__meta">
+            <strong>Heading / 2XL</strong>
+            Syne · 600
+          </div>
+          <div class="type-spec__sample">
+            <h3 style="font-family: var(--font-display); font-size: var(--size-2xl); font-weight: 600;">Quarterly orbital review</h3>
+          </div>
+        </div>
+        <div class="type-spec">
+          <div class="type-spec__meta">
+            <strong>Body / LG</strong>
+            Manrope · 300<br />
+            1.7 line-height
+          </div>
+          <div class="type-spec__sample">
+            <p style="font-family: var(--font-sans); font-size: var(--size-lg); font-weight: 300; line-height: 1.7; color: var(--ink-soft);">
+              Long-form reading copy uses Manrope at a generous line height for legibility across extended messages — letters drawn for screens, not pages.
+            </p>
+          </div>
+        </div>
+        <div class="type-spec">
+          <div class="type-spec__meta">
+            <strong>UI / SM</strong>
+            JetBrains Mono · 500
+          </div>
+          <div class="type-spec__sample">
+            <div style="font-family: var(--font-mono); font-size: var(--size-sm);">cmd.send → trans.encrypt(rsa-4096) → ✓ ack</div>
+          </div>
+        </div>
+        <div class="type-spec">
+          <div class="type-spec__meta">
+            <strong>Eyebrow / XS</strong>
+            JetBrains Mono<br />
+            mega tracking
+          </div>
+          <div class="type-spec__sample">
+            <div class="mega plasma">◇ SECTOR // 04 — LIVE</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- COMPONENTS -->
+    <section class="showcase__block">
+      <div class="showcase__block-head">
+        <div>
+          <div class="showcase__block-num">03 // components</div>
+        </div>
+        <div>
+          <h2 class="showcase__block-title">Mechanical parts.</h2>
+          <p class="showcase__block-desc">Sharp corners, hairline borders, plasma glow on focus. Built to feel like instrumentation, not stationery.</p>
+        </div>
+      </div>
+      <div class="showcase__panel">
+        <div class="tile-grid">
+          <div class="tile">
+            <div class="tile__label">Buttons</div>
+            <div class="tile__samples">
+              <button class="btn btn--primary">Transmit</button>
+              <button class="btn">Reply</button>
+              <button class="btn btn--ghost">Discard</button>
+              <button class="btn btn--danger">Purge</button>
+            </div>
+          </div>
+          <div class="tile">
+            <div class="tile__label">Chips</div>
+            <div class="tile__samples">
+              <span class="chip chip--plasma">flagged</span>
+              <span class="chip chip--priority">urgent</span>
+              <span class="chip chip--solar">draft</span>
+              <span class="chip chip--lime">live</span>
+              <span class="chip chip--violet">cc</span>
+              <span class="chip chip--ghost">archived</span>
+            </div>
+          </div>
+          <div class="tile">
+            <div class="tile__label">Badges</div>
+            <div class="tile__samples">
+              <span class="badge">04</span>
+              <span class="badge" style="background: var(--solar);">12</span>
+              <span class="badge" style="background: var(--plasma); color: var(--void);">99+</span>
+              <span class="kbd">⌘</span>
+              <span class="kbd">K</span>
+            </div>
+          </div>
+          <div class="tile">
+            <div class="tile__label">Avatars</div>
+            <div class="tile__samples">
+              <div class="av av--plasma">AT</div>
+              <div class="av av--priority">RK</div>
+              <div class="av av--solar">JM</div>
+              <div class="av av--violet">QS</div>
+              <div class="av av--lime">YO</div>
+              <div class="av av--ghost">+8</div>
+            </div>
+          </div>
+          <div class="tile">
+            <div class="tile__label">Inputs</div>
+            <div class="tile__samples" style="flex-direction: column; align-items: stretch; width: 100%;">
+              <input class="input" placeholder="recipient @ orbital.mail" />
+              <div class="search" style="margin-top: var(--u2);">
+                <svg class="search__icn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+                <input class="input" placeholder="search transmissions" />
+                <div class="search__kbd"><span class="kbd">⌘</span><span class="kbd">K</span></div>
+              </div>
+            </div>
+          </div>
+          <div class="tile">
+            <div class="tile__label">Controls</div>
+            <div class="tile__samples">
+              <input type="checkbox" class="check" checked />
+              <input type="checkbox" class="check" />
+              <label class="toggle">
+                <input type="checkbox" checked />
+                <span class="toggle__track"><span class="toggle__thumb"></span></span>
+              </label>
+              <label class="toggle">
+                <input type="checkbox" />
+                <span class="toggle__track"><span class="toggle__thumb"></span></span>
+              </label>
+            </div>
+          </div>
+          <div class="tile" style="grid-column: span 2;">
+            <div class="tile__label">Signal indicators</div>
+            <div class="tile__samples" style="gap: var(--u4);">
+              <span style="display:inline-flex;align-items:center;gap:var(--u2);"><span class="dot is-live"></span><span class="mono" style="font-size:var(--size-xs);">live</span></span>
+              <span style="display:inline-flex;align-items:center;gap:var(--u2);"><span class="dot is-plasma"></span><span class="mono" style="font-size:var(--size-xs);">unread</span></span>
+              <span style="display:inline-flex;align-items:center;gap:var(--u2);"><span class="dot is-priority"></span><span class="mono" style="font-size:var(--size-xs);">priority</span></span>
+              <span style="display:inline-flex;align-items:center;gap:var(--u2);"><span class="dot"></span><span class="mono" style="font-size:var(--size-xs);">idle</span></span>
+              <span class="tag">channel-04</span>
+              <span class="coord">42.7N · 67.3E</span>
+            </div>
+          </div>
+          <div class="tile">
+            <div class="tile__label">Group</div>
+            <div class="tile__samples">
+              <div class="btn-group">
+                <button class="btn btn--sm">Reply</button>
+                <button class="btn btn--sm">Forward</button>
+                <button class="btn btn--sm">Archive</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SURFACES -->
+    <section class="showcase__block">
+      <div class="showcase__block-head">
+        <div>
+          <div class="showcase__block-num">04 // surfaces</div>
+        </div>
+        <div>
+          <h2 class="showcase__block-title">Five flows. One mind.</h2>
+          <p class="showcase__block-desc">Each surface is a distinct vantage point on the same dataset — the inbox grid, the open transmission, the composing console, the system settings deck.</p>
+        </div>
+      </div>
+      <div class="preview-grid">
+        <a href="./login.html" class="preview">
+          <div class="preview__head">
+            <span class="preview__name">Ingress</span>
+            <span class="preview__path">/login.html →</span>
+          </div>
+          <div class="preview__body">
+            <div class="mega plasma">◇ SECURE INGRESS</div>
+            <div style="font-family:var(--font-display);font-size:var(--size-xl);font-weight:700;letter-spacing:var(--track-tight);line-height:1.1;">Identify.</div>
+            <div style="font-family:var(--font-mono);font-size:var(--size-2xs);text-transform:uppercase;letter-spacing:var(--track-mega);color:var(--ink-mute);">◇ address</div>
+            <div style="font-family:var(--font-mono);font-size:var(--size-sm);color:var(--ink);border-bottom:1px solid var(--hairline-bold);padding-bottom:var(--u2);">callsign @ orbital.mail</div>
+            <div style="font-family:var(--font-mono);font-size:var(--size-2xs);text-transform:uppercase;letter-spacing:var(--track-mega);color:var(--ink-mute);margin-top:var(--u2);">◇ passphrase</div>
+            <div style="font-family:var(--font-mono);font-size:var(--size-sm);color:var(--ink);border-bottom:1px solid var(--hairline-bold);padding-bottom:var(--u2);">••••••••••••</div>
+            <div style="margin-top:var(--u2);padding:var(--u3) var(--u4);background:var(--plasma);color:var(--void);font-family:var(--font-mono);font-size:var(--size-2xs);text-transform:uppercase;letter-spacing:var(--track-wide);text-align:center;font-weight:600;">Transmit credentials →</div>
+          </div>
+        </a>
+        <a href="./inbox.html" class="preview">
+          <div class="preview__head">
+            <span class="preview__name">Inbox</span>
+            <span class="preview__path">/inbox.html →</span>
+          </div>
+          <div class="preview__body">
+            <div style="display:flex;align-items:center;gap:var(--u3);padding:var(--u3) 0;border-bottom:1px solid var(--hairline);">
+              <span class="dot is-plasma"></span>
+              <div style="flex:1;">
+                <div style="font-family:var(--font-sans);font-weight:600;color:var(--ink);font-size:var(--size-sm);">Yara Okonkwo</div>
+                <div style="font-family:var(--font-sans);color:var(--ink);font-size:var(--size-xs);">Re: orbital telemetry sync — Q3</div>
+                <div style="color:var(--ink-mute);font-size:var(--size-xs);font-family:var(--font-sans);">The decay window for sector 4 has shifted by 0.04 ms…</div>
+              </div>
+              <div style="font-family:var(--font-mono);font-size:var(--size-2xs);color:var(--plasma);">02:47</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:var(--u3);padding:var(--u3) 0;border-bottom:1px solid var(--hairline);">
+              <span class="dot is-priority"></span>
+              <div style="flex:1;">
+                <div style="font-family:var(--font-sans);font-weight:600;color:var(--ink);font-size:var(--size-sm);">Mission Ops <span class="chip chip--priority" style="margin-left:4px;">urgent</span></div>
+                <div style="font-family:var(--font-sans);color:var(--ink);font-size:var(--size-xs);">Anomaly detected — please confirm</div>
+              </div>
+              <div style="font-family:var(--font-mono);font-size:var(--size-2xs);color:var(--priority);">now</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:var(--u3);padding:var(--u3) 0;">
+              <span class="dot"></span>
+              <div style="flex:1;">
+                <div style="font-family:var(--font-sans);color:var(--ink-soft);font-size:var(--size-sm);">Akira Tanaka</div>
+                <div style="font-family:var(--font-sans);color:var(--ink-mute);font-size:var(--size-xs);">Design system v0.4 review notes</div>
+              </div>
+              <div style="font-family:var(--font-mono);font-size:var(--size-2xs);color:var(--ink-mute);">14h</div>
+            </div>
+          </div>
+        </a>
+
+        <a href="./thread.html" class="preview">
+          <div class="preview__head">
+            <span class="preview__name">Read</span>
+            <span class="preview__path">/thread.html →</span>
+          </div>
+          <div class="preview__body">
+            <div class="mega plasma">◇ TRANSMISSION // 04 OF 12</div>
+            <div style="font-family:var(--font-display);font-size:var(--size-xl);font-weight:600;letter-spacing:var(--track-tight);line-height:1.1;">Re: orbital telemetry sync — Q3</div>
+            <div style="display:flex;gap:var(--u3);align-items:center;margin-top:var(--u2);">
+              <div class="av av--plasma av--sm">YO</div>
+              <div>
+                <div style="font-size:var(--size-xs);color:var(--ink);font-family:var(--font-sans);">Yara Okonkwo</div>
+                <div style="font-family:var(--font-mono);font-size:var(--size-2xs);color:var(--ink-mute);">y.okonkwo@orbital.mail</div>
+              </div>
+            </div>
+            <p style="margin-top:var(--u3);font-family:var(--font-sans);color:var(--ink-soft);font-size:var(--size-sm);line-height:1.5;">The decay window for sector 4 has shifted by 0.04 ms — well inside tolerance, but the trend is worth tracking…</p>
+          </div>
+        </a>
+
+        <a href="./compose.html" class="preview">
+          <div class="preview__head">
+            <span class="preview__name">Compose</span>
+            <span class="preview__path">/compose.html →</span>
+          </div>
+          <div class="preview__body">
+            <div class="mega plasma">▶ NEW TRANSMISSION</div>
+            <div style="display:grid;grid-template-columns:60px 1fr;gap:var(--u3);font-family:var(--font-sans);font-size:var(--size-xs);border-bottom:1px solid var(--hairline);padding-bottom:var(--u);">
+              <span class="mega" style="font-size:var(--size-2xs);">TO</span>
+              <span class="recipient" style="padding:1px var(--u2);">Yara Okonkwo<span class="recipient__close">×</span></span>
+            </div>
+            <div style="display:grid;grid-template-columns:60px 1fr;gap:var(--u3);font-family:var(--font-sans);font-size:var(--size-xs);border-bottom:1px solid var(--hairline);padding-bottom:var(--u);">
+              <span class="mega" style="font-size:var(--size-2xs);">SUBJ</span>
+              <span style="color:var(--ink);">Re: orbital telemetry sync — Q3</span>
+            </div>
+            <p style="font-family:var(--font-sans);font-size:var(--size-sm);color:var(--ink-soft);line-height:1.5;">Yara — quick note while it's fresh. The shift you flagged…</p>
+          </div>
+        </a>
+
+        <a href="./settings.html" class="preview">
+          <div class="preview__head">
+            <span class="preview__name">Settings</span>
+            <span class="preview__path">/settings.html →</span>
+          </div>
+          <div class="preview__body">
+            <div class="mega plasma">◇ SYSTEM // PREFERENCES</div>
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:var(--u2) 0;border-bottom:1px solid var(--hairline);">
+              <div>
+                <div style="font-family:var(--font-sans);color:var(--ink);font-size:var(--size-sm);">Quiet hours</div>
+                <div style="font-family:var(--font-sans);color:var(--ink-mute);font-size:var(--size-xs);">21:00 → 07:00 local</div>
+              </div>
+              <label class="toggle"><input type="checkbox" checked /><span class="toggle__track"><span class="toggle__thumb"></span></span></label>
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:var(--u2) 0;">
+              <div>
+                <div style="font-family:var(--font-sans);color:var(--ink);font-size:var(--size-sm);">Encrypted-only outbound</div>
+                <div style="font-family:var(--font-sans);color:var(--ink-mute);font-size:var(--size-xs);">PGP / Signal protocol</div>
+              </div>
+              <label class="toggle"><input type="checkbox" /><span class="toggle__track"><span class="toggle__thumb"></span></span></label>
+            </div>
+          </div>
+        </a>
+      </div>
+    </section>
+
+    <!-- FOOTER -->
+    <footer class="showcase__foot">
+      <div>◇ ORBITAL // v0.1 — built without javascript</div>
+      <div>tinklapiai@gmail.com · 42.7N · 67.3E</div>
+      <div>© 2087 · all signals reserved</div>
+    </footer>
+
+  </div>
+</main>
+</body>
+</html>

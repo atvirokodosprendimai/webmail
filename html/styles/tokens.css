@@ -1,0 +1,107 @@
+/* ORBITAL // design tokens — DAYLIGHT (light theme) */
+
+:root {
+  /* paper substrate — warm cream blueprint */
+  --void:           #F4F1EA;        /* page bg, lightest */
+  --hull:           #EDE9DC;        /* nav / sidebar — slightly tinted */
+  --deck:           #FBF8F0;        /* list / read pane — brightest */
+  --console:        #E5E0CE;
+  --plate:          #DCD6BE;
+  --rim:            #B5AC93;
+  --hairline:       rgba(20, 24, 40, 0.10);
+  --hairline-bold:  rgba(20, 24, 40, 0.22);
+
+  /* signal palette — deepened so it reads on cream */
+  --plasma:         #006B5F;        /* deep teal — system live, primary */
+  --plasma-dim:     #00574D;
+  --plasma-glow:    rgba(0, 107, 95, 0.22);
+  --priority:       #C8413B;        /* rich coral red — urgent / unread */
+  --priority-dim:   #9E2D27;
+  --priority-glow:  rgba(200, 65, 59, 0.20);
+  --solar:          #B87420;        /* mustard amber — drafts / attention */
+  --solar-dim:      #8A5410;
+  --lime:           #4A7A1C;        /* olive green — live / online */
+  --violet:         #4A3DAD;        /* indigo — tertiary */
+
+  /* tint backgrounds — accent washed on cream */
+  --tint-plasma:        rgba(0, 107, 95, 0.10);
+  --tint-plasma-faint:  rgba(0, 107, 95, 0.06);
+  --tint-plasma-haze:   rgba(0, 107, 95, 0.04);
+  --tint-plasma-fill:   rgba(0, 107, 95, 0.18);
+  --tint-priority:      rgba(200, 65, 59, 0.10);
+  --tint-priority-soft: rgba(200, 65, 59, 0.20);
+  --tint-solar:         rgba(184, 116, 32, 0.12);
+  --tint-lime:          rgba(74, 122, 28, 0.10);
+  --tint-lime-edge:     rgba(74, 122, 28, 0.45);
+  --tint-violet:        rgba(74, 61, 173, 0.10);
+  --tint-violet-edge:   rgba(74, 61, 173, 0.45);
+  --hover:              rgba(20, 24, 40, 0.04);
+
+  /* type */
+  --ink:            #0C0E16;        /* near-black on cream */
+  --ink-soft:       #2A2D3D;
+  --ink-mute:       #5C6076;
+  --ink-faint:      #8B8F9E;
+  --ink-ghost:      #B5B8C2;
+
+  /* type stacks */
+  --font-display:   "Syne", "Times New Roman", serif;
+  --font-mono:      "JetBrains Mono", "SF Mono", "Menlo", monospace;
+  --font-sans:      "Manrope", -apple-system, BlinkMacSystemFont, sans-serif;
+
+  /* scale */
+  --size-2xs:       10px;
+  --size-xs:        11px;
+  --size-sm:        12px;
+  --size-base:      13px;
+  --size-md:        14px;
+  --size-lg:        16px;
+  --size-xl:        20px;
+  --size-2xl:       28px;
+  --size-3xl:       40px;
+  --size-4xl:       64px;
+  --size-5xl:       96px;
+
+  /* tracking */
+  --track-tight:    -0.02em;
+  --track-base:     0;
+  --track-wide:     0.08em;
+  --track-mega:     0.24em;
+
+  /* rhythm */
+  --u:              4px;
+  --u2:             8px;
+  --u3:             12px;
+  --u4:             16px;
+  --u5:             24px;
+  --u6:             32px;
+  --u7:             48px;
+  --u8:             64px;
+  --u9:             96px;
+
+  /* radii — mostly sharp */
+  --r-none:         0;
+  --r-xs:           2px;
+  --r-sm:           4px;
+  --r-md:           8px;
+  --r-pill:         999px;
+
+  /* elevation — editorial lift, not neon halo */
+  --glow-plasma:    0 0 0 1px var(--plasma), 0 2px 12px -4px var(--plasma-glow);
+  --glow-priority:  0 0 0 1px var(--priority), 0 2px 12px -4px var(--priority-glow);
+  --inset-rim:      inset 0 0 0 1px var(--hairline);
+  --paper-lift:     0 1px 0 0 rgba(20, 24, 40, 0.04), 0 2px 6px -2px rgba(20, 24, 40, 0.06);
+
+  /* motion */
+  --ease-out:       cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-snap:      cubic-bezier(0.7, 0, 0.3, 1);
+  --dur-fast:       120ms;
+  --dur:            220ms;
+  --dur-slow:       420ms;
+
+  /* layout */
+  --rail-w:         72px;
+  --nav-w:          280px;
+  --list-w:         420px;
+  --topbar-h:       56px;
+}

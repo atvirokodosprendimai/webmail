@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ORBITAL // settings</title>
+<link rel="stylesheet" href="./styles/tokens.css" />
+<link rel="stylesheet" href="./styles/base.css" />
+<link rel="stylesheet" href="./styles/shell.css" />
+<link rel="stylesheet" href="./styles/components.css" />
+<link rel="stylesheet" href="./styles/pages.css" />
+</head>
+<body>
+<main class="shell shell--settings">
+
+  <!-- RAIL -->
+  <aside class="rail">
+    <div class="rail__brand"><div class="rail__brand-mark">OR</div></div>
+    <a href="./inbox.html" class="rail__item" title="Inbox"><svg class="icn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 8h18M5 4h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Z"/></svg></a>
+    <a href="./compose.html" class="rail__item" title="Compose"><svg class="icn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></a>
+    <a href="./thread.html" class="rail__item" title="Threads"><svg class="icn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2Z"/></svg></a>
+    <div class="rail__spacer"></div>
+    <a href="./settings.html" class="rail__item is-active" title="Settings">
+      <svg class="icn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="3"/><path d="M12 1v6m0 10v6m11-11h-6M7 12H1"/></svg>
+    </a>
+    <a href="./index.html" class="rail__item" title="Design"><svg class="icn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg></a>
+    <div class="rail__avatar">M</div>
+  </aside>
+
+  <!-- NAV -->
+  <nav class="nav">
+    <div class="nav__head">
+      <div class="nav__head-row">
+        <h1>Settings</h1>
+        <span class="coord">v0.4</span>
+      </div>
+      <div class="mono" style="font-size: var(--size-2xs); color: var(--ink-mute);">system · preferences · identity</div>
+    </div>
+
+    <div class="nav__section">account</div>
+    <ul class="nav__list">
+      <li><a href="#" class="nav__link is-active"><span>Identity</span></a></li>
+      <li><a href="#" class="nav__link"><span>Signatures</span><span class="count">3</span></a></li>
+      <li><a href="#" class="nav__link"><span>Aliases</span><span class="count">2</span></a></li>
+      <li><a href="#" class="nav__link"><span>Forwarding</span></a></li>
+    </ul>
+
+    <div class="nav__section">interface</div>
+    <ul class="nav__list">
+      <li><a href="#" class="nav__link"><span>Appearance</span></a></li>
+      <li><a href="#" class="nav__link"><span>Density</span></a></li>
+      <li><a href="#" class="nav__link"><span>Keyboard</span></a></li>
+      <li><a href="#" class="nav__link"><span>Notifications</span></a></li>
+    </ul>
+
+    <div class="nav__section">system</div>
+    <ul class="nav__list">
+      <li><a href="#" class="nav__link"><span>Encryption</span><span class="chip chip--lime" style="padding: 1px 4px;">on</span></a></li>
+      <li><a href="#" class="nav__link"><span>Filters & rules</span></a></li>
+      <li><a href="#" class="nav__link"><span>Quiet hours</span></a></li>
+      <li><a href="#" class="nav__link"><span>API tokens</span></a></li>
+    </ul>
+
+    <div class="nav__footer">
+      <div class="nav__footer-row"><span>build</span><span>2087.06.04</span></div>
+      <div class="nav__footer-row"><span>node</span><span class="plasma">orbital-04-EU</span></div>
+    </div>
+  </nav>
+
+  <!-- SETTINGS -->
+  <section class="settings">
+    <div class="settings__inner">
+
+      <header class="settings__hero">
+        <div>
+          <div class="mega plasma">◇ SYSTEM // PREFERENCES</div>
+          <h1>Configure the<br />terminal.</h1>
+          <p>Tune appearance, behavior, and identity. Changes save automatically and propagate across all signed-in surfaces within 12 seconds.</p>
+        </div>
+        <div class="settings__sig">
+          <strong>tinklapiai@gmail.com</strong>
+          <div>node · orbital-04-EU</div>
+          <div>since 2082.03.11</div>
+          <div class="plasma" style="margin-top: var(--u2);">● connected · 87.4 ms</div>
+        </div>
+      </header>
+
+      <!-- IDENTITY -->
+      <section class="settings__section">
+        <div class="settings__section-head">
+          <h2>Identity</h2>
+          <span class="mega">01 · who you are</span>
+        </div>
+        <div class="settings__group">
+          <div class="settings__row">
+            <div>
+              <div class="settings__row-title">Display name</div>
+              <div class="settings__row-desc">Shown to recipients as the sender of your transmissions.</div>
+            </div>
+            <input class="input" value="M / Orbital" style="width: 280px;" />
+          </div>
+          <div class="settings__row">
+            <div>
+              <div class="settings__row-title">Primary address</div>
+              <div class="settings__row-desc">Default From for new transmissions. Aliases can be selected per message.</div>
+            </div>
+            <input class="input" value="tinklapiai@gmail.com" style="width: 280px;" />
+          </div>
+          <div class="settings__row">
+            <div>
+              <div class="settings__row-title">Status</div>
+              <div class="settings__row-desc">Visible to participants in shared threads and your contact card.</div>
+            </div>
+            <div style="display: flex; gap: var(--u);">
+              <button class="btn btn--sm chip--lime" style="background: var(--tint-lime); border-color: var(--tint-lime-edge); color: var(--lime);">● live</button>
+              <button class="btn btn--sm">away</button>
+              <button class="btn btn--sm">do not disturb</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- APPEARANCE -->
+      <section class="settings__section">
+        <div class="settings__section-head">
+          <h2>Appearance</h2>
+          <span class="mega">02 · how it looks</span>
+        </div>
+        <div class="settings__group" style="padding: var(--u5);">
+          <div class="theme-grid">
+            <div class="theme-card is-active">
+              <div class="theme-card__swatch">
+                <span style="background: #F4F1EA;"></span>
+                <span style="background: #FBF8F0;"></span>
+                <span style="background: #006B5F;"></span>
+                <span style="background: #C8413B;"></span>
+              </div>
+              <div class="theme-card__name plasma">◇ daylight · default</div>
+            </div>
+            <div class="theme-card">
+              <div class="theme-card__swatch">
+                <span style="background: #06070B;"></span>
+                <span style="background: #11141F;"></span>
+                <span style="background: #00E5D1;"></span>
+                <span style="background: #FF3D6E;"></span>
+              </div>
+              <div class="theme-card__name">◇ midnight · orbital</div>
+            </div>
+            <div class="theme-card">
+              <div class="theme-card__swatch">
+                <span style="background: #EFEAD8;"></span>
+                <span style="background: #DDD5B8;"></span>
+                <span style="background: #2C4A1C;"></span>
+                <span style="background: #B87420;"></span>
+              </div>
+              <div class="theme-card__name">◇ greenhouse</div>
+            </div>
+            <div class="theme-card">
+              <div class="theme-card__swatch">
+                <span style="background: #F2EDE0;"></span>
+                <span style="background: #E8DEC5;"></span>
+                <span style="background: #4A3DAD;"></span>
+                <span style="background: #B82D7A;"></span>
+              </div>
+              <div class="theme-card__name">◇ violet hour</div>
+            </div>
+          </div>
+
+          <hr class="hr" style="margin: var(--u5) 0;" />
+
+          <div class="settings__row" style="padding: 0; border: 0;">
+            <div>
+              <div class="settings__row-title">Density</div>
+              <div class="settings__row-desc">Trade vertical space for legibility, or compress for keyboard navigation.</div>
+            </div>
+            <div class="btn-group">
+              <button class="btn btn--sm">compact</button>
+              <button class="btn btn--sm" style="background: var(--plasma); color: var(--void); border-color: var(--plasma);">balanced</button>
+              <button class="btn btn--sm">spacious</button>
+            </div>
+          </div>
+
+          <hr class="hr" style="margin: var(--u4) 0;" />
+
+          <div class="settings__row" style="padding: 0; border: 0;">
+            <div>
+              <div class="settings__row-title">Scanline overlay</div>
+              <div class="settings__row-desc">Subtle horizontal lines on dark surfaces. Honors prefers-reduced-motion.</div>
+            </div>
+            <label class="toggle"><input type="checkbox" checked /><span class="toggle__track"><span class="toggle__thumb"></span></span></label>
+          </div>
+
+          <hr class="hr" style="margin: var(--u4) 0;" />
+
+          <div class="settings__row" style="padding: 0; border: 0;">
+            <div>
+              <div class="settings__row-title">Glow effects on focus</div>
+              <div class="settings__row-desc">Plasma halo on focused inputs and primary actions.</div>
+            </div>
+            <label class="toggle"><input type="checkbox" checked /><span class="toggle__track"><span class="toggle__thumb"></span></span></label>
+          </div>
+        </div>
+      </section>
+
+      <!-- NOTIFICATIONS -->
+      <section class="settings__section">
+        <div class="settings__section-head">
+          <h2>Signal & quiet</h2>
+          <span class="mega">03 · when it speaks</span>
+        </div>
+        <div class="settings__group">
+          <div class="settings__row">
+            <div>
+              <div class="settings__row-title">Quiet hours</div>
+              <div class="settings__row-desc">Suppress notifications during the configured window. Priority transmissions still surface.</div>
+            </div>
+            <div style="display: flex; gap: var(--u); align-items: center;">
+              <input class="input" value="21:00" style="width: 80px; text-align: center;" />
+              <span class="mono muted">→</span>
+              <input class="input" value="07:00" style="width: 80px; text-align: center;" />
+              <label class="toggle"><input type="checkbox" checked /><span class="toggle__track"><span class="toggle__thumb"></span></span></label>
+            </div>
+          </div>
+          <div class="settings__row">
+            <div>
+              <div class="settings__row-title">Priority bypass</div>
+              <div class="settings__row-desc">Allow flagged senders to break through quiet hours. Configure in Filters & rules.</div>
+            </div>
+            <label class="toggle"><input type="checkbox" checked /><span class="toggle__track"><span class="toggle__thumb"></span></span></label>
+          </div>
+          <div class="settings__row">
+            <div>
+              <div class="settings__row-title">Desktop notifications</div>
+              <div class="settings__row-desc">Native OS notifications for new transmissions matching your rules.</div>
+            </div>
+            <label class="toggle"><input type="checkbox" /><span class="toggle__track"><span class="toggle__thumb"></span></span></label>
+          </div>
+          <div class="settings__row">
+            <div>
+              <div class="settings__row-title">Audio cue on priority</div>
+              <div class="settings__row-desc">Short three-tone signal. <span class="plasma">Preview</span> available next to selector.</div>
+            </div>
+            <select class="input" style="width: 200px;">
+              <option>orbital — three tone</option>
+              <option>terminal — soft click</option>
+              <option>quiet — no audio</option>
+            </select>
+          </div>
+        </div>
+      </section>
+
+      <!-- ENCRYPTION -->
+      <section class="settings__section">
+        <div class="settings__section-head">
+          <h2>Encryption</h2>
+          <span class="mega">04 · who can read</span>
+        </div>
+        <div class="settings__group">
+          <div class="settings__row">
+            <div>
+              <div class="settings__row-title">
+                Encrypted outbound by default
+                <span class="chip chip--lime" style="margin-left: var(--u2);">● active</span>
+              </div>
+              <div class="settings__row-desc">All new transmissions encrypted with RSA-4096. Recipients without keys fall back to TLS-only with banner warning.</div>
+            </div>
+            <label class="toggle"><input type="checkbox" checked /><span class="toggle__track"><span class="toggle__thumb"></span></span></label>
+          </div>
+          <div class="settings__row">
+            <div>
+              <div class="settings__row-title">Signature</div>
+              <div class="settings__row-desc">Sign all outbound with your ed25519 key — <span class="mono plasma">f4:3a:1c:9e:…</span></div>
+            </div>
+            <label class="toggle"><input type="checkbox" checked /><span class="toggle__track"><span class="toggle__thumb"></span></span></label>
+          </div>
+          <div class="settings__row">
+            <div>
+              <div class="settings__row-title">Auto-expire sent messages</div>
+              <div class="settings__row-desc">Self-destructing transmissions for designated channels. Default off; configurable per-thread.</div>
+            </div>
+            <select class="input" style="width: 200px;">
+              <option>never</option>
+              <option>24 hours</option>
+              <option>7 days</option>
+              <option>30 days</option>
+            </select>
+          </div>
+        </div>
+      </section>
+
+      <!-- DANGER -->
+      <section class="settings__section">
+        <div class="settings__section-head">
+          <h2>Hazard zone</h2>
+          <span class="mega priority">05 · irreversible</span>
+        </div>
+        <div class="settings__group" style="border-color: var(--tint-priority-soft);">
+          <div class="settings__row">
+            <div>
+              <div class="settings__row-title">Purge trash now</div>
+              <div class="settings__row-desc">Permanently delete 142 messages in trash. Cannot be undone.</div>
+            </div>
+            <button class="btn btn--danger">Purge · 142</button>
+          </div>
+          <div class="settings__row">
+            <div>
+              <div class="settings__row-title">Export and close terminal</div>
+              <div class="settings__row-desc">Download all data as a signed archive, then deactivate this address.</div>
+            </div>
+            <button class="btn btn--danger">Begin shutdown</button>
+          </div>
+        </div>
+      </section>
+
+      <div class="showcase__foot" style="margin-top: var(--u8);">
+        <div>◇ ORBITAL // settings</div>
+        <div>autosaved · 03s ago</div>
+        <div>build 2087.06.04 · node orbital-04-EU</div>
+      </div>
+
+    </div>
+  </section>
+
+</main>
+</body>
+</html>
