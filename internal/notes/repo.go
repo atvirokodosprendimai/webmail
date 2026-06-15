@@ -63,6 +63,22 @@ func (r *Repo) UpsertContent(ctx context.Context, n Note) error {
 	}).Create(&n).Error
 }
 
+// DeleteByMessageIDsNotIn deletes every note whose message_id is NOT
+// in the keep set. Called by the poll loop's notes-folder full-scan
+// finaliser so notes the user deleted server-side (or the EXPUNGE
+// side of an edit) actually disappear locally. Returns the row count.
+func (r *Repo) DeleteByMessageIDsNotIn(ctx context.Context, keep []string) (int, error) {
+	q := r.db.WithContext(ctx).Model(&Note{})
+	if len(keep) > 0 {
+		q = q.Where("message_id NOT IN ?", keep)
+	}
+	res := q.Delete(&Note{})
+	if res.Error != nil {
+		return 0, res.Error
+	}
+	return int(res.RowsAffected), nil
+}
+
 // SetUID updates the UID column for a note row identified by
 // MessageID. Used after APPEND when the server returns APPENDUID so
 // we can later EXPUNGE the right message during edit.

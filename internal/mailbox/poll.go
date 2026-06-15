@@ -3,6 +3,7 @@ package mailbox
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 	"strings"
 	"time"
@@ -56,6 +57,11 @@ type PollWorker struct {
 // internal/notes.
 type NotesSink interface {
 	UpsertFromIMAP(ctx context.Context, in NoteUpsert) error
+	// PurgeStale deletes local note rows whose Message-IDs are not
+	// in keep. Called at the end of each Notes-folder full scan so
+	// EXPUNGE'd / Roundcube-deleted notes stop showing locally —
+	// IMAP is the source of truth.
+	PurgeStale(ctx context.Context, keep []string) (int, error)
 }
 
 // NoteUpsert is the shape the poll loop hands to the notes sink for
@@ -206,6 +212,7 @@ func (w *PollWorker) scanFolder(ctx context.Context, c *imapClient, fi folderInf
 		}
 	}
 	notesPath := w.isNotesFolder(fi.Name)
+	var notesSeenMIDs []string
 	for _, e := range envs {
 		if ctx.Err() != nil {
 			break
@@ -219,10 +226,16 @@ func (w *PollWorker) scanFolder(ctx context.Context, c *imapClient, fi folderInf
 		if notesPath {
 			body := ""
 			if len(e.TextPath) > 0 {
-				raw, err := c.fetchPartPeek(e.UID, e.TextPath)
-				if err == nil {
+				raw, ferr := c.fetchPartPeek(e.UID, e.TextPath)
+				if ferr == nil {
 					body = strings.TrimSpace(decodeTextBody(raw, e.TextEncoding, e.TextCharset))
 				}
+			}
+			mid := e.MessageID
+			if mid == "" {
+				// Mirror sink's synthetic fallback so PurgeStale's
+				// keep-set matches what's in the DB.
+				mid = fmt.Sprintf("<no-mid-uid-%d@orbital.local>", e.UID)
 			}
 			err := w.NotesSink.UpsertFromIMAP(ctx, NoteUpsert{
 				MessageID:   e.MessageID,
@@ -239,6 +252,7 @@ func (w *PollWorker) scanFolder(ctx context.Context, c *imapClient, fi folderInf
 				saveCursor()
 				continue
 			}
+			notesSeenMIDs = append(notesSeenMIDs, mid)
 			inserted++
 			saveCursor()
 			continue
@@ -301,6 +315,18 @@ func (w *PollWorker) scanFolder(ctx context.Context, c *imapClient, fi folderInf
 		saveCursor()
 	}
 	saveCursor()
+	// After processing the full Notes folder, purge local rows whose
+	// MIDs aren't on the server anymore. IMAP is the source of truth;
+	// this is what removes EXPUNGE'd / Roundcube-deleted notes from
+	// the /notes view AND cleans up zombie rows left behind by older
+	// versions of the sync code.
+	if notesPath && w.NotesSink != nil {
+		if n, perr := w.NotesSink.PurgeStale(ctx, notesSeenMIDs); perr != nil {
+			w.Log.Warn("mailbox: notes purge", "err", perr)
+		} else if n > 0 {
+			w.Log.Info("mailbox: notes purge", "deleted", n)
+		}
+	}
 	return inserted, nil
 }
 
