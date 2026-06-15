@@ -1,0 +1,32 @@
+package render
+
+// InboxStub is the placeholder page rendered after login until Phase 6
+// wires the real inbox. Lets us prove the auth flow end-to-end without
+// the IMAP layer.
+templ InboxStub(displayName, email, role string) {
+	@Base("ORBITAL // inbox") {
+		<main class="shell shell--showcase">
+			<div class="showcase">
+				<header class="showcase__hero">
+					<div>
+						<div class="showcase__eyebrow"><span>◇ ORBITAL // 00.SYS</span></div>
+						<h1 class="showcase__title">Welcome,<br/><em>{ displayName }</em>.</h1>
+						<p class="showcase__lede">
+							Inbox surface lands in Phase 6. Auth + persistence are alive.
+						</p>
+					</div>
+					<div class="showcase__metrics">
+						<div class="metric">
+							<div class="metric__label">user</div>
+							<div class="metric__value">{ email }</div>
+							<div class="metric__sub">{ role }</div>
+						</div>
+					</div>
+				</header>
+				<form method="post" action="/logout">
+					<button type="submit" class="btn btn--ghost">Logout</button>
+				</form>
+			</div>
+		</main>
+	}
+}

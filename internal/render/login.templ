@@ -1,0 +1,82 @@
+package render
+
+// Login renders the ingress page. errMsg, when non-empty, surfaces a
+// failure (bad credentials, session error).
+templ Login(errMsg string) {
+	@Base("ORBITAL // ingress") {
+		<main class="ingress">
+			<section class="ingress__hero">
+				<svg class="ingress__orbit" viewBox="0 0 600 600" fill="none" stroke="currentColor" aria-hidden="true">
+					<g style="color: var(--plasma); opacity: 0.55;">
+						<ellipse cx="300" cy="300" rx="280" ry="280" stroke-width="0.5"/>
+						<ellipse cx="300" cy="300" rx="220" ry="220" stroke-width="0.5" stroke-dasharray="2 4"/>
+						<ellipse cx="300" cy="300" rx="160" ry="160" stroke-width="0.5"/>
+						<ellipse cx="300" cy="300" rx="100" ry="100" stroke-width="0.5" stroke-dasharray="2 4"/>
+						<ellipse cx="300" cy="300" rx="40" ry="40" stroke-width="0.5"/>
+					</g>
+					<g style="color: var(--priority); opacity: 0.7;">
+						<ellipse cx="300" cy="300" rx="280" ry="120" stroke-width="0.5" transform="rotate(-22 300 300)"/>
+						<ellipse cx="300" cy="300" rx="240" ry="80" stroke-width="0.5" transform="rotate(18 300 300)" stroke-dasharray="3 6"/>
+					</g>
+					<g style="color: var(--plasma);">
+						<circle cx="300" cy="300" r="4" fill="currentColor"/>
+						<circle cx="580" cy="300" r="3" fill="currentColor"/>
+						<circle cx="300" cy="140" r="3" fill="currentColor"/>
+						<circle cx="440" cy="380" r="2.5" fill="currentColor"/>
+					</g>
+					<g style="color: var(--ink-faint);" stroke-width="0.4">
+						<line x1="300" y1="0" x2="300" y2="600"/>
+						<line x1="0" y1="300" x2="600" y2="300"/>
+					</g>
+				</svg>
+				<header class="ingress__brand">
+					<div class="ingress__brand-mark">ORBITAL</div>
+					<div class="ingress__brand-sub">mail terminal · v0.1</div>
+				</header>
+				<div class="ingress__copy">
+					<div class="ingress__eyebrow">
+						<span>◇ inbound · auth required</span>
+					</div>
+					<h1 class="ingress__title">Open the<br/><em>channel.</em></h1>
+					<p class="ingress__lede">
+						Sign in to the shared terminal to read inbound transmissions, draft outgoing signal, tag threads into projects, and keep your notes.
+					</p>
+				</div>
+				<footer class="ingress__footnote">
+					<div><strong class="plasma">● live</strong> node orbital-04</div>
+				</footer>
+			</section>
+			<section class="ingress__form-wrap">
+				<form class="ingress__form" action="/login" method="post">
+					<header class="ingress__form-head">
+						<h2>Identify.</h2>
+						<p>Enter your credentials to access the terminal.</p>
+					</header>
+					if errMsg != "" {
+						<div class="ingress__error" style="color: var(--priority); font-family: var(--font-mono); font-size: var(--size-2xs); text-transform: uppercase; letter-spacing: var(--track-mega); margin-bottom: var(--u3);">
+							◇ { errMsg }
+						</div>
+					}
+					<div class="ingress__field">
+						<label class="ingress__field-label" for="email"><span>◇ address</span></label>
+						<input id="email" name="email" type="email" class="ingress__field-input" placeholder="callsign @ orbital.mail" autocomplete="email" required/>
+					</div>
+					<div class="ingress__field">
+						<label class="ingress__field-label" for="password"><span>◇ passphrase</span></label>
+						<input id="password" name="password" type="password" class="ingress__field-input" placeholder="••••••••••••" autocomplete="current-password" required/>
+					</div>
+					<button type="submit" class="ingress__submit">
+						<span>Transmit credentials</span>
+						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+							<path d="M5 12h14M13 5l7 7-7 7"/>
+						</svg>
+					</button>
+					<p class="ingress__sig">
+						◇ build 2087.06.04 &nbsp;·&nbsp; node orbital-04-EU<br/>
+						all transmissions tls-encrypted
+					</p>
+				</form>
+			</section>
+		</main>
+	}
+}

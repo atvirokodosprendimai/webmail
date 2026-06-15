@@ -5,7 +5,7 @@ PKG := ./...
 GOOSE := go tool goose
 TEMPL := go tool templ
 DB_PATH ?= ./data/webmail.db
-MIGRATIONS_DIR := ./migrations
+MIGRATIONS_DIR := ./internal/db/migrations
 
 dev: templ-gen
 	go run ./cmd/webmail

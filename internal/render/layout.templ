@@ -1,0 +1,23 @@
+package render
+
+// Base is the shared <html>/<head>/<body> wrapper. Pages call it with a
+// page title and a body component.
+templ Base(title string) {
+	<!DOCTYPE html>
+	<html lang="en">
+		<head>
+			<meta charset="UTF-8"/>
+			<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+			<title>{ title }</title>
+			<link rel="stylesheet" href="/static/styles/tokens.css"/>
+			<link rel="stylesheet" href="/static/styles/base.css"/>
+			<link rel="stylesheet" href="/static/styles/shell.css"/>
+			<link rel="stylesheet" href="/static/styles/components.css"/>
+			<link rel="stylesheet" href="/static/styles/pages.css"/>
+			<script type="module" src="https://cdn.jsdelivr.net/gh/starfederation/datastar@v1.0.0/bundles/datastar.js"></script>
+		</head>
+		<body>
+			{ children... }
+		</body>
+	</html>
+}
