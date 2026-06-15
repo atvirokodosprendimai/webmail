@@ -1,5 +1,9 @@
 # ORBITAL — self-hosted webmail with projects, bookmarks and IMAP-backed markdown notes
 
+<img width="1299" height="732" alt="Screenshot 2026-06-15 at 22 18 44" src="https://github.com/user-attachments/assets/57856eff-e4ef-4894-bc48-e8d1171db4d4" />
+
+
+
 > One webmail to read, reply, archive — and turn email chaos into **projects**, **bookmarks for later**, and **shared markdown notes** that live inside your own IMAP server. Single Go binary. No JavaScript framework. CGO-free. Datastar-driven UI.
 
 ---
