@@ -49,7 +49,7 @@ func Compose(displayName string, counts NavCounts, p ComposePrefill, errMsg stri
 				}()
 			}
 			ctx = templ.InitializeContext(ctx)
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<main class=\"shell\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<main class=\"shell shell--compose\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -65,19 +65,19 @@ func Compose(displayName string, counts NavCounts, p ComposePrefill, errMsg stri
 					}()
 				}
 				ctx = templ.InitializeContext(ctx)
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "<section class=\"reader\" style=\"grid-column: span 2;\"><header class=\"reader__head\"><div><div class=\"mega plasma\">▶ NEW TRANSMISSION</div><h1 class=\"reader__subject\">Compose</h1></div></header>")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "<section class=\"reader\"><header class=\"reader__head\"><div><div class=\"reader__eyebrow\">Compose</div><h1 class=\"reader__subject\">New message</h1></div></header>")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 				if errMsg != "" {
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "<div style=\"color:var(--priority);font-family:var(--font-mono);font-size:var(--size-xs);\">◇ ")
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "<div class=\"ingress__error\" style=\"margin-bottom:var(--u4);\">")
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
 					var templ_7745c5c3_Var4 string
 					templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinStringErrs(errMsg)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/render/compose.templ`, Line: 23, Col: 108}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/render/compose.templ`, Line: 23, Col: 75}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var4))
 					if templ_7745c5c3_Err != nil {
@@ -88,7 +88,7 @@ func Compose(displayName string, counts NavCounts, p ComposePrefill, errMsg stri
 						return templ_7745c5c3_Err
 					}
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "<form method=\"post\" action=\"/compose/send\" style=\"display:flex;flex-direction:column;gap:var(--u2);\">")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "<form method=\"post\" action=\"/compose/send\" style=\"display:flex;flex-direction:column;gap:0;\">")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
@@ -111,59 +111,59 @@ func Compose(displayName string, counts NavCounts, p ComposePrefill, errMsg stri
 						return templ_7745c5c3_Err
 					}
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, "<div style=\"display:grid;grid-template-columns:80px 1fr;align-items:center;border-bottom:1px solid var(--hairline);\"><span class=\"mega\">TO</span> <input class=\"input\" type=\"text\" name=\"to\" placeholder=\"recipient@example.com, …\" value=\"")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, "<div class=\"form-row\"><label>To</label> <input class=\"input input--bare\" type=\"text\" name=\"to\" placeholder=\"recipient@example.com\" value=\"")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 				var templ_7745c5c3_Var6 string
 				templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.ResolveAttributeValue(p.To)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/render/compose.templ`, Line: 31, Col: 103}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/render/compose.templ`, Line: 31, Col: 110}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var6)
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, "\" required></div><div style=\"display:grid;grid-template-columns:80px 1fr;align-items:center;border-bottom:1px solid var(--hairline);\"><span class=\"mega\">CC</span> <input class=\"input\" type=\"text\" name=\"cc\" placeholder=\"cc@example.com, …\" value=\"")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, "\" required></div><div class=\"form-row\"><label>Cc</label> <input class=\"input input--bare\" type=\"text\" name=\"cc\" placeholder=\"cc@example.com\" value=\"")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 				var templ_7745c5c3_Var7 string
 				templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.ResolveAttributeValue(p.Cc)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/render/compose.templ`, Line: 35, Col: 96}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/render/compose.templ`, Line: 35, Col: 103}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var7)
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 10, "\"></div><div style=\"display:grid;grid-template-columns:80px 1fr;align-items:center;border-bottom:1px solid var(--hairline);\"><span class=\"mega\">SUBJ</span> <input class=\"input\" type=\"text\" name=\"subject\" value=\"")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 10, "\"></div><div class=\"form-row\"><label>Subject</label> <input class=\"input input--bare\" type=\"text\" name=\"subject\" value=\"")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 				var templ_7745c5c3_Var8 string
 				templ_7745c5c3_Var8, templ_7745c5c3_Err = templ.ResolveAttributeValue(p.Subject)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/render/compose.templ`, Line: 39, Col: 72}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/render/compose.templ`, Line: 39, Col: 84}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var8)
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 11, "\" required></div><textarea class=\"input\" name=\"body\" rows=\"14\" required>")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 11, "\" required></div><textarea class=\"input\" name=\"body\" rows=\"16\" placeholder=\"Write your message…\" style=\"margin-top:var(--u4);\" required>")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 				var templ_7745c5c3_Var9 string
 				templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.JoinStringErrs(p.Body)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/render/compose.templ`, Line: 41, Col: 69}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/render/compose.templ`, Line: 41, Col: 135}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var9))
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 12, "</textarea><div style=\"display:flex;justify-content:flex-end;gap:var(--u);\"><a href=\"/inbox\" class=\"btn btn--ghost\">Discard</a> <button type=\"submit\" class=\"btn btn--primary\">Transmit →</button></div></form></section>")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 12, "</textarea><div style=\"display:flex;justify-content:flex-end;gap:var(--u2);margin-top:var(--u4);\"><a href=\"/inbox\" class=\"btn btn--ghost\">Cancel</a> <button type=\"submit\" class=\"btn btn--primary\">Send</button></div></form></section>")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
@@ -179,7 +179,7 @@ func Compose(displayName string, counts NavCounts, p ComposePrefill, errMsg stri
 			}
 			return nil
 		})
-		templ_7745c5c3_Err = Base("ORBITAL // compose").Render(templ.WithChildren(ctx, templ_7745c5c3_Var2), templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = Base("New message — ORBITAL").Render(templ.WithChildren(ctx, templ_7745c5c3_Var2), templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

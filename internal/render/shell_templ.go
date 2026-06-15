@@ -183,7 +183,7 @@ func Shell(activeFolder string, counts NavCounts, displayName string) templ.Comp
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 14, "</div></aside><nav class=\"nav\"><div class=\"nav__head\"><div class=\"nav__head-row\"><h1>Orbital</h1></div><div class=\"mono\" style=\"font-size: var(--size-2xs); color: var(--ink-mute); display: flex; gap: var(--u2);\"><span class=\"dot is-live\"></span> <span>signal locked</span></div></div><a href=\"/compose\" class=\"nav__compose\"><span>+ transmit</span> <span class=\"shortcut\">⌘ N</span></a><div class=\"nav__section\">channels</div><ul class=\"nav__list\"><li>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 14, "</div></aside><nav class=\"nav\"><div class=\"nav__head\"><div class=\"nav__head-row\"><h1>ORBITAL</h1></div><div style=\"font-size: var(--size-xs); color: var(--fg-mute); display:flex; align-items:center; gap:var(--u);\"><span class=\"dot is-live\"></span> <span>Online</span></div></div><a href=\"/compose\" class=\"nav__compose\"><span>New message</span> <span class=\"shortcut\">⌘ N</span></a><div class=\"nav__section\">channels</div><ul class=\"nav__list\"><li>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -294,7 +294,7 @@ func Shell(activeFolder string, counts NavCounts, displayName string) templ.Comp
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 25, "\"><span>Notes</span></a></li></ul><div class=\"nav__footer\"><div class=\"nav__footer-row\"><span>◇ orbital v0.1</span> <span class=\"lime\">● live</span></div></div></nav>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 25, "\"><span>Notes</span></a></li></ul><div class=\"nav__footer\"><div class=\"nav__footer-row\"><span>ORBITAL v0.1</span> <span class=\"lime\">●  live</span></div></div></nav>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

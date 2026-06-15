@@ -11,7 +11,7 @@ type NoteRow struct {
 }
 
 templ NotesIndex(displayName string, counts NavCounts, rows []NoteRow) {
-	@Base("ORBITAL // notes") {
+	@Base("Notes — ORBITAL") {
 		<main class="shell shell--list">
 			@Shell("notes", counts, displayName) {
 				<section class="list">
@@ -19,30 +19,30 @@ templ NotesIndex(displayName string, counts NavCounts, rows []NoteRow) {
 						<div class="list__head-row">
 							<div>
 								<span class="list__title">Notes</span>
-								<span class="list__title-count">/ { pad2(len(rows)) }</span>
+								<span class="list__title-count">{ itoa(len(rows)) }</span>
 							</div>
-							<a href="/notes/new" class="btn btn--primary">+ new</a>
+							<a href="/notes/new" class="btn btn--primary">New note</a>
 						</div>
 					</header>
 					<div class="list__rows">
 						for _, n := range rows {
 							<a href={ templ.URL("/notes/" + n.ID) } class="row">
-								<div class="row__rail">
-									if n.Pinned {
-										<span class="dot is-priority"></span>
-									} else {
-										<span class="dot"></span>
-									}
-								</div>
 								<div class="row__main">
-									<div class="row__subject">{ n.Title }</div>
+									<div class="row__subject">
+										{ n.Title }
+										if n.Pinned {
+											<span class="chip chip--warn" title="Pinned">
+												<svg class="icon icon--sm" viewBox="0 0 24 24"><path d="M12 17v5M9 10.76l3.24-3.24L15.5 4.26l4.24 4.24-3.26 3.26L13.24 15M5 21l4-4"/></svg>
+											</span>
+										}
+									</div>
 									<div class="row__snippet">{ n.Preview }</div>
 								</div>
-								<div class="row__when mono">{ n.UpdatedAt.Format("Jan 02 15:04") }</div>
+								<div class="row__when">{ n.UpdatedAt.Format("Jan 02") }</div>
 							</a>
 						}
 						if len(rows) == 0 {
-							<div style="padding:var(--u4);color:var(--ink-mute);font-family:var(--font-mono);">◇ no notes yet</div>
+							<div class="empty">No notes yet.</div>
 						}
 					</div>
 				</section>
@@ -60,13 +60,13 @@ type NoteEdit struct {
 }
 
 templ NoteEditor(displayName string, counts NavCounts, n NoteEdit) {
-	@Base("ORBITAL // note") {
-		<main class="shell">
+	@Base("Note — ORBITAL") {
+		<main class="shell shell--read">
 			@Shell("notes", counts, displayName) {
-				<section class="reader" style="grid-column: span 2;">
+				<section class="reader">
 					<header class="reader__head">
 						<div>
-							<div class="mega plasma">◇ NOTE</div>
+							<div class="reader__eyebrow">Note</div>
 							if n.ID == "" {
 								<h1 class="reader__subject">New note</h1>
 							} else {

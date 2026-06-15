@@ -21,3 +21,4 @@
 - 2026-06-15 `0dc87ca` policy: repo-level no-delete rules in CLAUDE.md; ignore .env.swp
 - 2026-06-15 `c9383a3` ui: drop empty reader pane from inbox + notes list views
 - 2026-06-15 `6d379e4` ops: docker compose.yml + healthcheck subcommand + ghcr workflow
+- 2026-06-15 `691dc52` chore: changelog + claude-mem placeholders
