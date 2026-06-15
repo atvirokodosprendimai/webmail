@@ -19,3 +19,4 @@
 - 2026-06-15 `5aa4a3b` fix: never delete user .env in smoke/clean targets
 - 2026-06-15 `6df9ad0` policy: forbid agent deletion of data/ and .env
 - 2026-06-15 `0dc87ca` policy: repo-level no-delete rules in CLAUDE.md; ignore .env.swp
+- 2026-06-15 `c9383a3` ui: drop empty reader pane from inbox + notes list views
