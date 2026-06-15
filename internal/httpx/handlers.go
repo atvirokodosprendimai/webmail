@@ -587,13 +587,17 @@ func (a *App) composeSend(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	u := auth.CurrentUser(r)
+	// From identity: the shared mailbox address (IMAP_USERNAME), with
+	// the webmail user's display name for attribution. Recipients see
+	// "Alice <team@example.com>" — replies route back to the team box
+	// where everyone can see them. The individual user's personal
+	// email is internal to ORBITAL and never goes over the wire.
 	cmd := send.Command{
-		From:     formatFrom(u.DisplayName, u.Email),
+		From:     formatFrom(u.DisplayName, a.Cfg.IMAPUsername),
 		To:       splitAddrs(r.FormValue("to")),
 		Cc:       splitAddrs(r.FormValue("cc")),
 		Subject:  r.FormValue("subject"),
 		BodyText: r.FormValue("body"),
-		ReplyTo:  a.Cfg.IMAPUsername,
 	}
 	replyTo := r.FormValue("reply_to")
 	if replyTo != "" {
@@ -665,12 +669,13 @@ func (a *App) threadReply(w http.ResponseWriter, r *http.Request) {
 	if !strings.HasPrefix(strings.ToLower(subject), "re:") {
 		subject = "Re: " + subject
 	}
+	// See composeSend — From uses the shared mailbox address +
+	// per-user display name for attribution.
 	cmd := send.Command{
-		From:      formatFrom(u.DisplayName, u.Email),
+		From:      formatFrom(u.DisplayName, a.Cfg.IMAPUsername),
 		To:        []string{orig.FromAddr},
 		Subject:   subject,
 		BodyText:  r.FormValue("body"),
-		ReplyTo:   a.Cfg.IMAPUsername,
 		InReplyTo: orig.MessageID,
 		Refs:      append(strings.Fields(orig.References), orig.MessageID),
 	}

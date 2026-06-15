@@ -23,3 +23,4 @@
 - 2026-06-15 `6d379e4` ops: docker compose.yml + healthcheck subcommand + ghcr workflow
 - 2026-06-15 `691dc52` chore: changelog + claude-mem placeholders
 - 2026-06-15 `e38776e` chore: claude-mem placeholder in internal/uploads
+- 2026-06-15 `a04305c` merge: readme title mentions issues
