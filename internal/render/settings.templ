@@ -14,26 +14,26 @@ type SettingsView struct {
 }
 
 templ Settings(displayName string, counts NavCounts, s SettingsView) {
-	@Base("ORBITAL // settings") {
-		<main class="shell">
+	@Base("Settings — ORBITAL") {
+		<main class="shell shell--settings">
 			@Shell("settings", counts, displayName) {
-				<section class="reader" style="grid-column: span 2;">
+				<section class="reader">
 					<header class="reader__head">
 						<div>
-							<div class="mega plasma">◇ SYSTEM // PREFERENCES</div>
+							<div class="reader__eyebrow">System</div>
 							<h1 class="reader__subject">Settings</h1>
 						</div>
 					</header>
 					<div class="msg">
-						<div class="mega">◇ shared mailbox (read-only)</div>
-						<div class="mono" style="font-size:var(--size-xs);color:var(--ink-mute);display:grid;grid-template-columns:160px 1fr;gap:var(--u);">
-							<span>IMAP_HOST</span><span>{ s.IMAPHost }:{ pad2(s.IMAPPort) }</span>
-							<span>IMAP_USERNAME</span><span>{ s.IMAPUser }</span>
-							<span>IMAP_TLS</span><span>{ s.IMAPTLS }</span>
-							<span>SMTP_HOST</span><span>{ s.SMTPHost }:{ pad2(s.SMTPPort) }</span>
-							<span>SMTP_USERNAME</span><span>{ s.SMTPUser }</span>
-							<span>SMTP_TLS</span><span>{ s.SMTPTLS }</span>
-							<span>NOTES_FOLDER</span><span>{ s.NotesFolder }</span>
+						<div class="section-h" style="margin:0 0 var(--u3) 0;">Shared mailbox</div>
+						<div style="font-size:var(--size-sm);color:var(--fg-soft);display:grid;grid-template-columns:160px 1fr;gap:var(--u2);">
+							<span class="mute">IMAP host</span><span>{ s.IMAPHost }:{ itoa(s.IMAPPort) }</span>
+							<span class="mute">IMAP username</span><span>{ s.IMAPUser }</span>
+							<span class="mute">IMAP TLS</span><span>{ s.IMAPTLS }</span>
+							<span class="mute">SMTP host</span><span>{ s.SMTPHost }:{ itoa(s.SMTPPort) }</span>
+							<span class="mute">SMTP username</span><span>{ s.SMTPUser }</span>
+							<span class="mute">SMTP TLS</span><span>{ s.SMTPTLS }</span>
+							<span class="mute">Notes folder</span><span>{ s.NotesFolder }</span>
 						</div>
 					</div>
 				</section>

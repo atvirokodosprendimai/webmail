@@ -44,7 +44,7 @@ func Base(title string) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "</title><link rel=\"stylesheet\" href=\"/static/styles/tokens.css\"><link rel=\"stylesheet\" href=\"/static/styles/base.css\"><link rel=\"stylesheet\" href=\"/static/styles/shell.css\"><link rel=\"stylesheet\" href=\"/static/styles/components.css\"><link rel=\"stylesheet\" href=\"/static/styles/pages.css\"><script type=\"module\" src=\"https://cdn.jsdelivr.net/gh/starfederation/datastar@v1.0.0/bundles/datastar.js\"></script></head><body>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "</title><link rel=\"preconnect\" href=\"https://rsms.me/\"><link rel=\"stylesheet\" href=\"https://rsms.me/inter/inter.css\"><link rel=\"stylesheet\" href=\"/static/styles/tokens.css\"><link rel=\"stylesheet\" href=\"/static/styles/base.css\"><link rel=\"stylesheet\" href=\"/static/styles/shell.css\"><link rel=\"stylesheet\" href=\"/static/styles/components.css\"><link rel=\"stylesheet\" href=\"/static/styles/pages.css\"><script type=\"module\" src=\"https://cdn.jsdelivr.net/gh/starfederation/datastar@v1.0.0/bundles/datastar.js\"></script></head><body>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

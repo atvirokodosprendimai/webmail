@@ -14,34 +14,30 @@ type BookmarkRow struct {
 }
 
 templ Bookmarks(displayName string, counts NavCounts, mine []BookmarkRow, team []BookmarkRow) {
-	@Base("ORBITAL // bookmarks") {
-		<main class="shell">
+	@Base("Bookmarks — ORBITAL") {
+		<main class="shell shell--read">
 			@Shell("bookmarks", counts, displayName) {
-				<section class="reader" style="grid-column: span 2; overflow-y:auto;">
+				<section class="reader">
 					<header class="reader__head">
 						<div>
-							<div class="mega plasma">🔖 BOOKMARKS</div>
-							<h1 class="reader__subject">For later</h1>
+							<div class="reader__eyebrow">Saved for later</div>
+							<h1 class="reader__subject">Bookmarks</h1>
 						</div>
 					</header>
-					<section style="margin-top:var(--u4);">
-						<div class="mega">◇ mine — { pad2(len(mine)) }</div>
-						for _, b := range mine {
-							@bookmarkRow(b, "personal")
-						}
-						if len(mine) == 0 {
-							<div class="mono" style="color:var(--ink-mute);padding:var(--u2) 0;">◇ none — bookmark a thread from its page</div>
-						}
-					</section>
-					<section style="margin-top:var(--u4);">
-						<div class="mega">◇ team — { pad2(len(team)) }</div>
-						for _, b := range team {
-							@bookmarkRow(b, "shared")
-						}
-						if len(team) == 0 {
-							<div class="mono" style="color:var(--ink-mute);padding:var(--u2) 0;">◇ none</div>
-						}
-					</section>
+					<div class="section-h">Mine — { itoa(len(mine)) }</div>
+					for _, b := range mine {
+						@bookmarkRow(b, "personal")
+					}
+					if len(mine) == 0 {
+						<div class="empty">Nothing yet. Bookmark a thread from its page.</div>
+					}
+					<div class="section-h">Team — { itoa(len(team)) }</div>
+					for _, b := range team {
+						@bookmarkRow(b, "shared")
+					}
+					if len(team) == 0 {
+						<div class="empty">No team bookmarks.</div>
+					}
 				</section>
 			}
 		</main>
@@ -55,22 +51,20 @@ templ bookmarkRow(b BookmarkRow, scope string) {
 			<div style="flex:1;">
 				<div class="msg__from">
 					<a href={ templ.URL("/thread/" + b.IngestID) }>{ b.Subject }</a>
-					if scope == "personal" {
-						<span class="chip chip--plasma" style="margin-left:var(--u);">⭐</span>
-					} else {
-						<span class="chip chip--violet" style="margin-left:var(--u);">👥</span>
+					if scope == "shared" {
+						<span class="chip" style="margin-left:var(--u2);">Team</span>
 					}
 				</div>
-				<div class="msg__when mono">
-					{ firstNonEmpty(b.FromName, b.FromAddr) } · { b.ReceivedAt.Format("2006-01-02 15:04") }
+				<div class="msg__when">
+					{ firstNonEmpty(b.FromName, b.FromAddr) } · { b.ReceivedAt.Format("Jan 2, 2006 · 15:04") }
 				</div>
 				if b.Note != "" {
-					<div style="margin-top:var(--u);color:var(--ink-soft);font-family:var(--font-sans);font-size:var(--size-sm);">{ b.Note }</div>
+					<div style="margin-top:var(--u);color:var(--fg-soft);font-size:var(--size-sm);">{ b.Note }</div>
 				}
 			</div>
 			<form method="post" action={ templ.URL("/bookmark/" + b.ID + "/remove") } style="display:inline;">
 				<input type="hidden" name="back" value="/bookmarks"/>
-				<button class="btn btn--sm btn--ghost" type="submit">remove</button>
+				<button class="btn btn--sm btn--ghost" type="submit">Remove</button>
 			</form>
 		</header>
 	</article>

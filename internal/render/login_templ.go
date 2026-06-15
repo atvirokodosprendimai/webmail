@@ -43,19 +43,19 @@ func Login(errMsg string) templ.Component {
 				}()
 			}
 			ctx = templ.InitializeContext(ctx)
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<main class=\"ingress\"><section class=\"ingress__hero\"><svg class=\"ingress__orbit\" viewBox=\"0 0 600 600\" fill=\"none\" stroke=\"currentColor\" aria-hidden=\"true\"><g style=\"color: var(--plasma); opacity: 0.55;\"><ellipse cx=\"300\" cy=\"300\" rx=\"280\" ry=\"280\" stroke-width=\"0.5\"></ellipse> <ellipse cx=\"300\" cy=\"300\" rx=\"220\" ry=\"220\" stroke-width=\"0.5\" stroke-dasharray=\"2 4\"></ellipse> <ellipse cx=\"300\" cy=\"300\" rx=\"160\" ry=\"160\" stroke-width=\"0.5\"></ellipse> <ellipse cx=\"300\" cy=\"300\" rx=\"100\" ry=\"100\" stroke-width=\"0.5\" stroke-dasharray=\"2 4\"></ellipse> <ellipse cx=\"300\" cy=\"300\" rx=\"40\" ry=\"40\" stroke-width=\"0.5\"></ellipse></g> <g style=\"color: var(--priority); opacity: 0.7;\"><ellipse cx=\"300\" cy=\"300\" rx=\"280\" ry=\"120\" stroke-width=\"0.5\" transform=\"rotate(-22 300 300)\"></ellipse> <ellipse cx=\"300\" cy=\"300\" rx=\"240\" ry=\"80\" stroke-width=\"0.5\" transform=\"rotate(18 300 300)\" stroke-dasharray=\"3 6\"></ellipse></g> <g style=\"color: var(--plasma);\"><circle cx=\"300\" cy=\"300\" r=\"4\" fill=\"currentColor\"></circle> <circle cx=\"580\" cy=\"300\" r=\"3\" fill=\"currentColor\"></circle> <circle cx=\"300\" cy=\"140\" r=\"3\" fill=\"currentColor\"></circle> <circle cx=\"440\" cy=\"380\" r=\"2.5\" fill=\"currentColor\"></circle></g> <g style=\"color: var(--ink-faint);\" stroke-width=\"0.4\"><line x1=\"300\" y1=\"0\" x2=\"300\" y2=\"600\"></line> <line x1=\"0\" y1=\"300\" x2=\"600\" y2=\"300\"></line></g></svg><header class=\"ingress__brand\"><div class=\"ingress__brand-mark\">ORBITAL</div><div class=\"ingress__brand-sub\">mail terminal · v0.1</div></header><div class=\"ingress__copy\"><div class=\"ingress__eyebrow\"><span>◇ inbound · auth required</span></div><h1 class=\"ingress__title\">Open the<br><em>channel.</em></h1><p class=\"ingress__lede\">Sign in to the shared terminal to read inbound transmissions, draft outgoing signal, tag threads into projects, and keep your notes.</p></div><footer class=\"ingress__footnote\"><div><strong class=\"plasma\">● live</strong> node orbital-04</div></footer></section><section class=\"ingress__form-wrap\"><form class=\"ingress__form\" action=\"/login\" method=\"post\"><header class=\"ingress__form-head\"><h2>Identify.</h2><p>Enter your credentials to access the terminal.</p></header>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<main class=\"ingress\"><section class=\"ingress__hero\"><header class=\"ingress__brand\"><div class=\"ingress__brand-mark\">OR</div><div class=\"ingress__brand-sub\">ORBITAL · webmail</div></header><div class=\"ingress__copy\"><div class=\"ingress__eyebrow\">Team mail terminal</div><h1 class=\"ingress__title\">Mail, projects,<br>and <em>notes</em>.</h1><p class=\"ingress__lede\">Sign in to the shared inbox to read mail, reply, tag threads into projects, bookmark for later, and keep team notes — all backed by your own IMAP server.</p></div><footer class=\"ingress__footnote\"><span><span class=\"dot is-live\"></span>&nbsp; service online</span> <span>v0.1</span></footer></section><section class=\"ingress__form-wrap\"><form class=\"ingress__form\" action=\"/login\" method=\"post\"><header class=\"ingress__form-head\"><h2>Sign in</h2><p>Enter your credentials to access the inbox.</p></header>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			if errMsg != "" {
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "<div class=\"ingress__error\" style=\"color: var(--priority); font-family: var(--font-mono); font-size: var(--size-2xs); text-transform: uppercase; letter-spacing: var(--track-mega); margin-bottom: var(--u3);\">◇ ")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "<div class=\"ingress__error\">")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 				var templ_7745c5c3_Var3 string
 				templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinStringErrs(errMsg)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/render/login.templ`, Line: 57, Col: 19}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/render/login.templ`, Line: 32, Col: 42}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var3))
 				if templ_7745c5c3_Err != nil {
@@ -66,13 +66,13 @@ func Login(errMsg string) templ.Component {
 					return templ_7745c5c3_Err
 				}
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "<div class=\"ingress__field\"><label class=\"ingress__field-label\" for=\"email\"><span>◇ address</span></label> <input id=\"email\" name=\"email\" type=\"email\" class=\"ingress__field-input\" placeholder=\"callsign @ orbital.mail\" autocomplete=\"email\" required></div><div class=\"ingress__field\"><label class=\"ingress__field-label\" for=\"password\"><span>◇ passphrase</span></label> <input id=\"password\" name=\"password\" type=\"password\" class=\"ingress__field-input\" placeholder=\"••••••••••••\" autocomplete=\"current-password\" required></div><button type=\"submit\" class=\"ingress__submit\"><span>Transmit credentials</span> <svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\"><path d=\"M5 12h14M13 5l7 7-7 7\"></path></svg></button><p class=\"ingress__sig\">◇ build 2087.06.04 &nbsp;·&nbsp; node orbital-04-EU<br>all transmissions tls-encrypted</p></form></section></main>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "<div class=\"ingress__field\"><label class=\"ingress__field-label\" for=\"email\"><span>Email</span></label> <input id=\"email\" name=\"email\" type=\"email\" class=\"ingress__field-input\" placeholder=\"you@example.com\" autocomplete=\"email\" required></div><div class=\"ingress__field\"><label class=\"ingress__field-label\" for=\"password\"><span>Password</span></label> <input id=\"password\" name=\"password\" type=\"password\" class=\"ingress__field-input\" placeholder=\"••••••••\" autocomplete=\"current-password\" required></div><button type=\"submit\" class=\"ingress__submit\"><span>Sign in</span> <svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\"><path d=\"M5 12h14M13 5l7 7-7 7\"></path></svg></button><p class=\"ingress__sig\">All connections are TLS-encrypted.</p></form></section></main>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			return nil
 		})
-		templ_7745c5c3_Err = Base("ORBITAL // ingress").Render(templ.WithChildren(ctx, templ_7745c5c3_Var2), templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = Base("Sign in — ORBITAL").Render(templ.WithChildren(ctx, templ_7745c5c3_Var2), templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

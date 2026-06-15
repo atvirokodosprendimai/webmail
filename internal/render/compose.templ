@@ -9,39 +9,39 @@ type ComposePrefill struct {
 }
 
 templ Compose(displayName string, counts NavCounts, p ComposePrefill, errMsg string) {
-	@Base("ORBITAL // compose") {
-		<main class="shell">
+	@Base("New message — ORBITAL") {
+		<main class="shell shell--compose">
 			@Shell("compose", counts, displayName) {
-				<section class="reader" style="grid-column: span 2;">
+				<section class="reader">
 					<header class="reader__head">
 						<div>
-							<div class="mega plasma">▶ NEW TRANSMISSION</div>
-							<h1 class="reader__subject">Compose</h1>
+							<div class="reader__eyebrow">Compose</div>
+							<h1 class="reader__subject">New message</h1>
 						</div>
 					</header>
 					if errMsg != "" {
-						<div style="color:var(--priority);font-family:var(--font-mono);font-size:var(--size-xs);">◇ { errMsg }</div>
+						<div class="ingress__error" style="margin-bottom:var(--u4);">{ errMsg }</div>
 					}
-					<form method="post" action="/compose/send" style="display:flex;flex-direction:column;gap:var(--u2);">
+					<form method="post" action="/compose/send" style="display:flex;flex-direction:column;gap:0;">
 						if p.ReplyTo != "" {
 							<input type="hidden" name="reply_to" value={ p.ReplyTo }/>
 						}
-						<div style="display:grid;grid-template-columns:80px 1fr;align-items:center;border-bottom:1px solid var(--hairline);">
-							<span class="mega">TO</span>
-							<input class="input" type="text" name="to" placeholder="recipient@example.com, …" value={ p.To } required/>
+						<div class="form-row">
+							<label>To</label>
+							<input class="input input--bare" type="text" name="to" placeholder="recipient@example.com" value={ p.To } required/>
 						</div>
-						<div style="display:grid;grid-template-columns:80px 1fr;align-items:center;border-bottom:1px solid var(--hairline);">
-							<span class="mega">CC</span>
-							<input class="input" type="text" name="cc" placeholder="cc@example.com, …" value={ p.Cc }/>
+						<div class="form-row">
+							<label>Cc</label>
+							<input class="input input--bare" type="text" name="cc" placeholder="cc@example.com" value={ p.Cc }/>
 						</div>
-						<div style="display:grid;grid-template-columns:80px 1fr;align-items:center;border-bottom:1px solid var(--hairline);">
-							<span class="mega">SUBJ</span>
-							<input class="input" type="text" name="subject" value={ p.Subject } required/>
+						<div class="form-row">
+							<label>Subject</label>
+							<input class="input input--bare" type="text" name="subject" value={ p.Subject } required/>
 						</div>
-						<textarea class="input" name="body" rows="14" required>{ p.Body }</textarea>
-						<div style="display:flex;justify-content:flex-end;gap:var(--u);">
-							<a href="/inbox" class="btn btn--ghost">Discard</a>
-							<button type="submit" class="btn btn--primary">Transmit →</button>
+						<textarea class="input" name="body" rows="16" placeholder="Write your message…" style="margin-top:var(--u4);" required>{ p.Body }</textarea>
+						<div style="display:flex;justify-content:flex-end;gap:var(--u2);margin-top:var(--u4);">
+							<a href="/inbox" class="btn btn--ghost">Cancel</a>
+							<button type="submit" class="btn btn--primary">Send</button>
 						</div>
 					</form>
 				</section>

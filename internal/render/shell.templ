@@ -41,15 +41,15 @@ templ Shell(activeFolder string, counts NavCounts, displayName string) {
 	<nav class="nav">
 		<div class="nav__head">
 			<div class="nav__head-row">
-				<h1>Orbital</h1>
+				<h1>ORBITAL</h1>
 			</div>
-			<div class="mono" style="font-size: var(--size-2xs); color: var(--ink-mute); display: flex; gap: var(--u2);">
+			<div style="font-size: var(--size-xs); color: var(--fg-mute); display:flex; align-items:center; gap:var(--u);">
 				<span class="dot is-live"></span>
-				<span>signal locked</span>
+				<span>Online</span>
 			</div>
 		</div>
 		<a href="/compose" class="nav__compose">
-			<span>+ transmit</span>
+			<span>New message</span>
 			<span class="shortcut">⌘ N</span>
 		</a>
 		<div class="nav__section">channels</div>
@@ -75,8 +75,8 @@ templ Shell(activeFolder string, counts NavCounts, displayName string) {
 		</ul>
 		<div class="nav__footer">
 			<div class="nav__footer-row">
-				<span>◇ orbital v0.1</span>
-				<span class="lime">● live</span>
+				<span>ORBITAL v0.1</span>
+				<span class="lime">●  live</span>
 			</div>
 		</div>
 	</nav>

@@ -1,193 +1,90 @@
-/* ORBITAL // base + global atmosphere */
+/* Reset + base typography + universal helpers. */
 
-@import url("https://fonts.googleapis.com/css2?family=Syne:wght@500;600;700;800&family=JetBrains+Mono:wght@300;400;500;600&family=Manrope:wght@300;400;500;600;700&display=swap");
+*, *::before, *::after { box-sizing: border-box; }
 
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
-}
+html { -webkit-text-size-adjust: 100%; }
 
-html,
 body {
   margin: 0;
-  padding: 0;
-  background: var(--void);
-  color: var(--ink);
-  font-family: var(--font-mono);
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-sans);
   font-size: var(--size-base);
-  line-height: 1.5;
-  letter-spacing: var(--track-base);
+  line-height: var(--leading-base);
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  text-rendering: optimizeLegibility;
-  min-height: 100vh;
-  overflow: hidden;
 }
 
-/* page-level atmosphere — warm paper wash + blueprint grid */
-body::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  background:
-    radial-gradient(ellipse 80% 50% at 12% 0%, rgba(0, 107, 95, 0.06), transparent 60%),
-    radial-gradient(ellipse 60% 40% at 100% 100%, rgba(200, 65, 59, 0.05), transparent 50%),
-    linear-gradient(180deg, var(--void) 0%, var(--hull) 100%);
-  pointer-events: none;
-  z-index: 0;
-}
-
-body::after {
-  content: "";
-  position: fixed;
-  inset: 0;
-  background-image:
-    linear-gradient(rgba(20, 24, 40, 0.05) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(20, 24, 40, 0.05) 1px, transparent 1px);
-  background-size: 32px 32px;
-  background-position: 0 0;
-  pointer-events: none;
-  z-index: 0;
-  mask-image: radial-gradient(ellipse at center, black 30%, transparent 90%);
-}
-
-h1, h2, h3, h4 {
-  font-family: var(--font-display);
-  font-weight: 600;
+h1, h2, h3, h4, h5, h6 {
+  margin: 0;
+  font-weight: var(--weight-semibold);
   letter-spacing: var(--track-tight);
-  margin: 0;
-  color: var(--ink);
+  line-height: var(--leading-tight);
 }
 
-h1 { font-size: var(--size-4xl); line-height: 1; }
-h2 { font-size: var(--size-3xl); line-height: 1.05; }
-h3 { font-size: var(--size-2xl); line-height: 1.1; }
-h4 { font-size: var(--size-xl); line-height: 1.2; }
+h1 { font-size: var(--size-2xl); }
+h2 { font-size: var(--size-xl); }
+h3 { font-size: var(--size-lg); }
 
-p {
-  margin: 0;
-  color: var(--ink-soft);
-}
+p { margin: 0; }
 
 a {
-  color: var(--plasma);
+  color: var(--accent);
   text-decoration: none;
-  transition: color var(--dur-fast) var(--ease-out);
+  transition: color var(--t-fast);
 }
-a:hover {
-  color: var(--ink);
+a:hover { color: var(--accent-hover); }
+
+button { font-family: inherit; }
+
+::selection { background: var(--accent-soft); color: var(--accent); }
+
+input, textarea, select {
+  font-family: inherit;
+  font-size: var(--size-md);
+  color: var(--fg);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  padding: var(--u2) var(--u3);
+  transition: border-color var(--t-fast), box-shadow var(--t-fast);
 }
 
-/* selection */
-::selection {
-  background: var(--plasma);
-  color: var(--void);
-}
-
-/* scrollbars — minimal */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-::-webkit-scrollbar-thumb {
-  background: var(--rim);
-  border-radius: var(--r-pill);
-}
-::-webkit-scrollbar-thumb:hover {
-  background: var(--plasma-dim);
-}
-
-/* form reset */
-button,
-input,
-textarea,
-select {
-  font: inherit;
-  color: inherit;
-  background: none;
-  border: none;
+input:focus, textarea:focus, select:focus {
   outline: none;
-}
-button {
-  cursor: pointer;
-}
-
-/* utility primitives */
-.mono { font-family: var(--font-mono); }
-.display { font-family: var(--font-display); }
-.sans { font-family: var(--font-sans); }
-.upper { text-transform: uppercase; letter-spacing: var(--track-wide); }
-.mega { text-transform: uppercase; letter-spacing: var(--track-mega); font-size: var(--size-xs); }
-.muted { color: var(--ink-mute); }
-.faint { color: var(--ink-faint); }
-.soft { color: var(--ink-soft); }
-.plasma { color: var(--plasma); }
-.priority { color: var(--priority); }
-.solar { color: var(--solar); }
-.lime { color: var(--lime); }
-
-.hr {
-  height: 1px;
-  background: var(--hairline);
-  border: 0;
-  margin: 0;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
 }
 
-.dot {
-  display: inline-block;
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--ink-faint);
-}
-.dot.is-live {
-  background: var(--lime);
-  box-shadow: 0 0 8px var(--lime);
-}
-.dot.is-priority {
-  background: var(--priority);
-  box-shadow: 0 0 8px var(--priority-glow);
-}
-.dot.is-plasma {
-  background: var(--plasma);
-  box-shadow: 0 0 8px var(--plasma-glow);
-}
+textarea { resize: vertical; line-height: var(--leading-base); }
+::placeholder { color: var(--fg-faint); }
 
-/* coordinate tag — recurring decorative element */
-.coord {
-  font-family: var(--font-mono);
+/* Utilities */
+.mono { font-family: var(--font-mono); font-size: var(--size-xs); }
+.mute { color: var(--fg-mute); }
+.faint { color: var(--fg-faint); }
+.plasma { color: var(--accent); }
+
+/* Lucide-style icons */
+.icon {
+  width: 16px;
+  height: 16px;
+  stroke-width: 1.75;
+  stroke: currentColor;
+  fill: none;
+  flex-shrink: 0;
+}
+.icon--sm { width: 14px; height: 14px; }
+.icon--lg { width: 20px; height: 20px; }
+.icn { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 1.5; }
+
+/* Deprecated "mega" eyebrow — keep alive for any leftover templ usage */
+.mega {
+  font-family: var(--font-sans);
   font-size: var(--size-2xs);
+  font-weight: var(--weight-medium);
   letter-spacing: var(--track-wide);
-  color: var(--ink-mute);
   text-transform: uppercase;
-}
-.coord::before {
-  content: "◇ ";
-  color: var(--plasma);
-}
-
-/* corner brackets — HUD decoration */
-.brackets {
-  position: relative;
-}
-.brackets::before,
-.brackets::after {
-  content: "";
-  position: absolute;
-  width: 10px;
-  height: 10px;
-  border-color: var(--plasma);
-  border-style: solid;
-}
-.brackets::before {
-  top: -1px; left: -1px;
-  border-width: 1px 0 0 1px;
-}
-.brackets::after {
-  bottom: -1px; right: -1px;
-  border-width: 0 1px 1px 0;
+  color: var(--fg-mute);
 }

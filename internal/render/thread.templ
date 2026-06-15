@@ -39,13 +39,13 @@ type BookmarkState struct {
 
 // Thread page renders one full thread of messages plus actions.
 templ Thread(displayName string, counts NavCounts, subject string, msgs []ThreadMessage, projects []ProjectOption, tagged []string, bookmark BookmarkState) {
-	@Base("ORBITAL // " + subject) {
-		<main class="shell">
+	@Base(subject + " — ORBITAL") {
+		<main class="shell shell--read">
 			@Shell("inbox", counts, displayName) {
-				<section class="reader" style="grid-column: span 2;">
+				<section class="reader">
 					<header class="reader__head">
 						<div>
-							<div class="mega plasma">◇ TRANSMISSION</div>
+							<div class="reader__eyebrow">Thread</div>
 							<h1 class="reader__subject">{ subject }</h1>
 						</div>
 						if len(msgs) > 0 {
@@ -53,22 +53,22 @@ templ Thread(displayName string, counts NavCounts, subject string, msgs []Thread
 						}
 					</header>
 					<details class="reader__tag" open>
-						<summary class="mono" style="cursor:pointer;">+ tag into project</summary>
-						<form method="post" action="/thread/tag" style="display:flex;flex-direction:column;gap:var(--u);margin-top:var(--u2);">
+						<summary>Add to project</summary>
+						<form method="post" action="/thread/tag" style="display:flex;flex-direction:column;gap:var(--u2);margin-top:var(--u3);">
 							if len(msgs) > 0 {
 								<input type="hidden" name="ingest_id" value={ msgs[0].IngestID }/>
 							}
 							<select name="project_slug" class="input">
-								<option value="">— pick project —</option>
+								<option value="">Pick a project…</option>
 								for _, p := range projects {
 									<option value={ p.Slug }>{ p.Name }</option>
 								}
 							</select>
-							<button class="btn btn--sm btn--primary" type="submit">Tag thread</button>
+							<button class="btn btn--sm btn--primary" type="submit" style="align-self:flex-start;">Tag thread</button>
 						</form>
 						if len(tagged) > 0 {
-							<div style="margin-top:var(--u2);font-family:var(--font-mono);font-size:var(--size-xs);color:var(--ink-mute);">
-								Tagged in: { joinStr(tagged) }
+							<div style="margin-top:var(--u3);font-size:var(--size-xs);color:var(--fg-mute);">
+								In: { joinStr(tagged) }
 							</div>
 						}
 					</details>
@@ -79,11 +79,11 @@ templ Thread(displayName string, counts NavCounts, subject string, msgs []Thread
 						@threadMessage(m)
 					}
 					if len(msgs) > 0 {
-						<details class="reader__reply">
-							<summary class="mono">+ reply</summary>
-							<form method="post" action={ templ.URL("/thread/" + msgs[len(msgs)-1].IngestID + "/reply") } style="margin-top:var(--u2);display:flex;flex-direction:column;gap:var(--u2);">
-								<textarea name="body" class="input" rows="12" placeholder="Compose your transmission…" required>{ replyQuote(msgs[len(msgs)-1]) }</textarea>
-								<button class="btn btn--primary" type="submit">Transmit reply</button>
+						<details class="reader__reply" open>
+							<summary>Reply</summary>
+							<form method="post" action={ templ.URL("/thread/" + msgs[len(msgs)-1].IngestID + "/reply") } style="margin-top:var(--u3);display:flex;flex-direction:column;gap:var(--u3);">
+								<textarea name="body" class="input" rows="12" placeholder="Write your reply…" required>{ replyQuote(msgs[len(msgs)-1]) }</textarea>
+								<button class="btn btn--primary" type="submit" style="align-self:flex-end;">Send reply</button>
 							</form>
 						</details>
 					}
@@ -95,38 +95,50 @@ templ Thread(displayName string, counts NavCounts, subject string, msgs []Thread
 
 templ threadBookmark(ingestID string, b BookmarkState) {
 	<details class="reader__tag" open>
-		<summary class="mono" style="cursor:pointer;">🔖 bookmark for later</summary>
-		<div style="display:flex;flex-direction:column;gap:var(--u);margin-top:var(--u2);">
-			if b.PersonalID == "" {
-				<form method="post" action={ templ.URL("/thread/" + ingestID + "/bookmark") }>
-					<input type="hidden" name="scope" value="personal"/>
-					<input type="text" name="note" placeholder="optional note (visible only to you)" class="input"/>
-					<button class="btn btn--sm btn--primary" type="submit" style="margin-top:var(--u);">+ Bookmark (personal)</button>
-				</form>
-			} else {
-				<div style="display:flex;align-items:center;gap:var(--u);">
-					<span class="chip chip--plasma">⭐ personal bookmark</span>
-					<form method="post" action={ templ.URL("/bookmark/" + b.PersonalID + "/remove") } style="display:inline;">
-						<input type="hidden" name="back" value={ "/thread/" + ingestID }/>
-						<button class="btn btn--sm btn--ghost" type="submit">remove</button>
+		<summary>Bookmark for later</summary>
+		<div style="display:flex;flex-direction:column;gap:var(--u3);margin-top:var(--u3);">
+			<div>
+				<div class="section-h" style="margin:0 0 var(--u) 0;">Personal</div>
+				if b.PersonalID == "" {
+					<form method="post" action={ templ.URL("/thread/" + ingestID + "/bookmark") } style="display:flex;gap:var(--u2);align-items:center;">
+						<input type="hidden" name="scope" value="personal"/>
+						<input type="text" name="note" placeholder="Optional note (only you see this)" class="input" style="flex:1;"/>
+						<button class="btn btn--sm btn--primary" type="submit">Bookmark</button>
 					</form>
-				</div>
-			}
-			if b.SharedID == "" {
-				<form method="post" action={ templ.URL("/thread/" + ingestID + "/bookmark") }>
-					<input type="hidden" name="scope" value="shared"/>
-					<input type="text" name="note" placeholder="optional note (visible to team)" class="input"/>
-					<button class="btn btn--sm" type="submit" style="margin-top:var(--u);">+ Bookmark (team)</button>
-				</form>
-			} else {
-				<div style="display:flex;align-items:center;gap:var(--u);">
-					<span class="chip chip--violet">👥 team bookmark</span>
-					<form method="post" action={ templ.URL("/bookmark/" + b.SharedID + "/remove") } style="display:inline;">
-						<input type="hidden" name="back" value={ "/thread/" + ingestID }/>
-						<button class="btn btn--sm btn--ghost" type="submit">remove</button>
+				} else {
+					<div style="display:flex;align-items:center;gap:var(--u2);">
+						<span class="chip chip--accent">
+							<svg class="icon icon--sm" viewBox="0 0 24 24"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+							Saved
+						</span>
+						<form method="post" action={ templ.URL("/bookmark/" + b.PersonalID + "/remove") } style="display:inline;">
+							<input type="hidden" name="back" value={ "/thread/" + ingestID }/>
+							<button class="btn btn--sm btn--ghost" type="submit">Remove</button>
+						</form>
+					</div>
+				}
+			</div>
+			<div>
+				<div class="section-h" style="margin:0 0 var(--u) 0;">Team</div>
+				if b.SharedID == "" {
+					<form method="post" action={ templ.URL("/thread/" + ingestID + "/bookmark") } style="display:flex;gap:var(--u2);align-items:center;">
+						<input type="hidden" name="scope" value="shared"/>
+						<input type="text" name="note" placeholder="Optional note (visible to team)" class="input" style="flex:1;"/>
+						<button class="btn btn--sm" type="submit">Share with team</button>
 					</form>
-				</div>
-			}
+				} else {
+					<div style="display:flex;align-items:center;gap:var(--u2);">
+						<span class="chip chip--accent">
+							<svg class="icon icon--sm" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+							Team
+						</span>
+						<form method="post" action={ templ.URL("/bookmark/" + b.SharedID + "/remove") } style="display:inline;">
+							<input type="hidden" name="back" value={ "/thread/" + ingestID }/>
+							<button class="btn btn--sm btn--ghost" type="submit">Remove</button>
+						</form>
+					</div>
+				}
+			</div>
 		</div>
 	</details>
 }
@@ -135,7 +147,8 @@ templ threadActions(m ThreadMessage) {
 	<div class="reader__actions">
 		<form method="post" action={ templ.URL("/thread/" + m.IngestID + "/flag") } style="display:inline;">
 			<input type="hidden" name="flagged" value={ boolStr(!m.Flagged) }/>
-			<button class="btn btn--sm" type="submit">
+			<button class="btn btn--sm" type="submit" title={ starTitle(m.Flagged) }>
+				<svg class="icon icon--sm" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" fill={ starFill(m.Flagged) }/></svg>
 				if m.Flagged {
 					Unstar
 				} else {
@@ -155,13 +168,28 @@ templ threadActions(m ThreadMessage) {
 		</form>
 		<form method="post" action={ templ.URL("/thread/" + m.IngestID + "/move") } style="display:inline;">
 			<input type="hidden" name="dest" value="Archive"/>
-			<button class="btn btn--sm" type="submit">Archive</button>
+			<button class="btn btn--sm" type="submit">
+				<svg class="icon icon--sm" viewBox="0 0 24 24"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
+				Archive
+			</button>
 		</form>
 		<form method="post" action={ templ.URL("/thread/" + m.IngestID + "/move") } style="display:inline;">
 			<input type="hidden" name="dest" value="Trash"/>
-			<button class="btn btn--sm btn--danger" type="submit">Delete</button>
+			<button class="btn btn--sm btn--danger" type="submit">
+				<svg class="icon icon--sm" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+				Delete
+			</button>
 		</form>
 	</div>
+}
+
+func starTitle(flagged bool) string {
+	if flagged { return "Unstar" }
+	return "Star"
+}
+func starFill(flagged bool) string {
+	if flagged { return "currentColor" }
+	return "none"
 }
 
 templ threadMessage(m ThreadMessage) {
