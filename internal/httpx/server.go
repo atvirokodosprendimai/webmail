@@ -46,6 +46,7 @@ func New(a *App) http.Handler {
 
 		r.Get("/inbox", a.inbox)
 		r.Get("/inbox/stream", a.inboxStream)
+		r.Get("/folder/{role}", a.folderView)
 		r.Get("/thread/{id}", a.thread)
 		r.Post("/thread/{id}/seen", a.threadSeen)
 		r.Post("/thread/{id}/flag", a.threadFlag)

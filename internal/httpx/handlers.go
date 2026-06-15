@@ -3,7 +3,9 @@ package httpx
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"net/http"
+	"net/mail"
 	"strconv"
 	"strings"
 	"time"
@@ -62,6 +64,74 @@ func (a *App) inbox(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	_ = render.Inbox(u.DisplayName, a.navCounts(r.Context()), rows).Render(r.Context(), w)
+}
+
+// folderView renders the same list template as /inbox but for any role
+// (sent, drafts, trash, archive). Lets the nav links work without
+// duplicating the template.
+func (a *App) folderView(w http.ResponseWriter, r *http.Request) {
+	u := auth.CurrentUser(r)
+	role := chi.URLParam(r, "role")
+	switch role {
+	case mailbox.FolderRoleSent, mailbox.FolderRoleDrafts,
+		mailbox.FolderRoleTrash, mailbox.FolderRoleArchive,
+		mailbox.FolderRoleInbox:
+	default:
+		http.NotFound(w, r)
+		return
+	}
+	rows, err := a.fetchRowsForRole(r.Context(), role, 100)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	_ = render.Inbox(u.DisplayName, a.navCounts(r.Context()), rows).Render(r.Context(), w)
+}
+
+func (a *App) fetchRowsForRole(ctx context.Context, role string, limit int) ([]render.InboxRow, error) {
+	var rows []struct {
+		ID         string
+		Subject    string
+		FromName   string
+		FromAddr   string
+		BodyText   string
+		ReceivedAt time.Time
+		Seen       bool
+		Flagged    bool
+		HasAttach  bool
+	}
+	err := a.DB.WithContext(ctx).
+		Table("mailbox_ingest AS m").
+		Select("m.id, m.subject, m.from_name, m.from_addr, m.body_text, m.received_at, m.seen, m.flagged, EXISTS (SELECT 1 FROM mailbox_attachment a WHERE a.ingest_id = m.id) AS has_attach").
+		Joins("INNER JOIN mailbox_folder f ON f.id = m.folder_id").
+		Where("f.role = ?", role).
+		Order("m.received_at DESC").
+		Limit(limit).
+		Scan(&rows).Error
+	if err != nil {
+		return nil, err
+	}
+	out := make([]render.InboxRow, 0, len(rows))
+	for _, r := range rows {
+		snip := r.BodyText
+		if len(snip) > 140 {
+			snip = snip[:140] + "…"
+		}
+		snip = strings.ReplaceAll(snip, "\n", " ")
+		out = append(out, render.InboxRow{
+			IngestID:   r.ID,
+			Subject:    mailbox.DecodeHeader(r.Subject),
+			FromName:   mailbox.DecodeHeader(r.FromName),
+			FromAddr:   r.FromAddr,
+			Snippet:    snip,
+			ReceivedAt: r.ReceivedAt,
+			Seen:       r.Seen,
+			Flagged:    r.Flagged,
+			HasAttach:  r.HasAttach,
+		})
+	}
+	return out, nil
 }
 
 func (a *App) fetchInboxRows(ctx context.Context, limit int) ([]render.InboxRow, error) {
@@ -266,10 +336,10 @@ func (a *App) composeSend(w http.ResponseWriter, r *http.Request) {
 	}
 	u := auth.CurrentUser(r)
 	cmd := send.Command{
-		From:    fmt.Sprintf("%q <%s>", u.DisplayName, u.Email),
-		To:      splitAddrs(r.FormValue("to")),
-		Cc:      splitAddrs(r.FormValue("cc")),
-		Subject: r.FormValue("subject"),
+		From:     formatFrom(u.DisplayName, u.Email),
+		To:       splitAddrs(r.FormValue("to")),
+		Cc:       splitAddrs(r.FormValue("cc")),
+		Subject:  r.FormValue("subject"),
 		BodyText: r.FormValue("body"),
 		ReplyTo:  a.Cfg.IMAPUsername,
 	}
@@ -290,12 +360,24 @@ func (a *App) composeSend(w http.ResponseWriter, r *http.Request) {
 		Host: a.Cfg.SMTPHost, Port: a.Cfg.SMTPPort, TLSMode: a.Cfg.SMTPTLS,
 		Username: a.Cfg.SMTPUsername, Password: a.Cfg.SMTPPassword,
 	}, cmd.From, append(cmd.To, cmd.Cc...), raw); err != nil {
+		slog.Error("smtp send", "err", err)
 		http.Error(w, "smtp: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	// Best-effort APPEND to Sent + STORE +\Answered on original.
-	_ = a.MailboxSvc.Reply(r.Context(), replyTo, a.Cfg.IMAPSentFolder, raw)
+	// APPEND to Sent + STORE +\Answered. Failure is non-fatal but logged
+	// (TRYCREATE auto-fix lives in the imap wrapper).
+	if rerr := a.MailboxSvc.Reply(r.Context(), replyTo, a.Cfg.IMAPSentFolder, raw); rerr != nil {
+		slog.Warn("imap append to Sent failed (mail still sent)", "err", rerr)
+	}
 	http.Redirect(w, r, "/inbox", http.StatusSeeOther)
+}
+
+// formatFrom returns an RFC 5322 address-with-display-name. Uses
+// net/mail so the display name is Q-encoded when it contains non-ASCII
+// (Lithuanian / German / etc.) and quoted when it contains tspecials.
+func formatFrom(displayName, email string) string {
+	addr := (&mail.Address{Name: displayName, Address: email}).String()
+	return addr
 }
 
 func splitAddrs(s string) []string {
@@ -322,10 +404,14 @@ func (a *App) threadReply(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	u := auth.CurrentUser(r)
+	subject := mailbox.DecodeHeader(orig.Subject)
+	if !strings.HasPrefix(strings.ToLower(subject), "re:") {
+		subject = "Re: " + subject
+	}
 	cmd := send.Command{
-		From:      fmt.Sprintf("%q <%s>", u.DisplayName, u.Email),
+		From:      formatFrom(u.DisplayName, u.Email),
 		To:        []string{orig.FromAddr},
-		Subject:   "Re: " + orig.Subject,
+		Subject:   subject,
 		BodyText:  r.FormValue("body"),
 		ReplyTo:   a.Cfg.IMAPUsername,
 		InReplyTo: orig.MessageID,
@@ -340,10 +426,13 @@ func (a *App) threadReply(w http.ResponseWriter, r *http.Request) {
 		Host: a.Cfg.SMTPHost, Port: a.Cfg.SMTPPort, TLSMode: a.Cfg.SMTPTLS,
 		Username: a.Cfg.SMTPUsername, Password: a.Cfg.SMTPPassword,
 	}, cmd.From, cmd.To, raw); err != nil {
+		slog.Error("smtp reply", "err", err)
 		http.Error(w, "smtp: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	_ = a.MailboxSvc.Reply(r.Context(), id, a.Cfg.IMAPSentFolder, raw)
+	if rerr := a.MailboxSvc.Reply(r.Context(), id, a.Cfg.IMAPSentFolder, raw); rerr != nil {
+		slog.Warn("imap append to Sent failed (mail still sent)", "err", rerr)
+	}
 	http.Redirect(w, r, "/thread/"+id, http.StatusSeeOther)
 }
 
@@ -660,3 +749,4 @@ func (a *App) settings(w http.ResponseWriter, r *http.Request) {
 }
 
 var _ = strconv.Itoa
+var _ = fmt.Sprintf

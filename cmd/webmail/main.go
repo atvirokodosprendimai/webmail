@@ -58,7 +58,7 @@ func runServer() error {
 	log.Info("db ready", "path", cfg.DBPath)
 
 	authRepo := auth.NewRepo(gdb)
-	sess := auth.NewSessions(cfg.SessionMaxAge)
+	sess := auth.NewSessions(cfg.SessionMaxAge, auth.NewStore(gdb))
 	authHandler := &auth.Handler{Repo: authRepo, Sess: sess}
 
 	mailboxRepo := mailbox.NewRepo(gdb)

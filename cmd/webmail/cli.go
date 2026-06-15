@@ -27,6 +27,7 @@ func runUserCLI(args []string) error {
 	if err != nil {
 		return err
 	}
+	_ = auth.NewStore(gdb) // keep symbol reachable; cli doesn't use sessions
 	repo := auth.NewRepo(gdb)
 	ctx := context.Background()
 

@@ -13,8 +13,11 @@ const sessionUserKey = "user_id"
 // Sessions wraps an scs.SessionManager with the session-key knobs we use.
 type Sessions struct{ *scs.SessionManager }
 
-func NewSessions(maxAge time.Duration) *Sessions {
+func NewSessions(maxAge time.Duration, store scs.Store) *Sessions {
 	m := scs.New()
+	if store != nil {
+		m.Store = store
+	}
 	m.Lifetime = maxAge
 	m.IdleTimeout = maxAge
 	m.Cookie.Name = "orbital_sid"
