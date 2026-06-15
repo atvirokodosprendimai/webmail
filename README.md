@@ -342,7 +342,9 @@ Server-rendered HTML + a few `data-*` attributes for reactivity covers everythin
 
 ### What licence?
 
-Pick one before shipping — the repository ships without an explicit `LICENSE` file at v0.1. Until that lands, copy the source for personal use only.
+**GNU Affero General Public License v3.0 (AGPL-3.0)**. Use, modify, and self-host ORBITAL freely. If you run a **modified** version as a network service (i.e. a SaaS offering), you must publish the source of your modifications to its users under the same licence (AGPL §13, the "network use" clause). Self-hosting for your own team or company is fully permitted; copyleft only kicks in when you serve modified code to others over a network.
+
+For proprietary integration or different terms, contact the maintainers — dual licensing is possible.
 
 ---
 
@@ -366,4 +368,20 @@ Design system mocks (`/html/*.html` + `/html/styles/*.css`) port directly into `
 
 ## License
 
-`MIT` placeholder — drop a real `LICENSE` file before shipping outside your machine.
+**[GNU Affero General Public License v3.0](./LICENSE)** (AGPL-3.0).
+
+ORBITAL is free software:
+
+- ✅ Use it for any purpose, including commercial.
+- ✅ Modify it.
+- ✅ Self-host it for your team / company / family.
+- ⚠️ If you offer a **modified** version as a network service (SaaS), you must publish your source modifications to those users under the same AGPL-3.0 licence — the "network use" clause of AGPL §13.
+- ⚠️ Derivative works distributed in any form must also be AGPL-3.0 (or a compatible later version).
+
+For proprietary or non-AGPL terms, open an issue — dual licensing is on the table.
+
+Copyright © 2026 Atvirų Kodų Sprendimai and contributors.
+
+```
+SPDX-License-Identifier: AGPL-3.0-or-later
+```
