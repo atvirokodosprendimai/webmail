@@ -22,6 +22,7 @@ import (
 	"github.com/atvirokodosprendimai/webmail/internal/config"
 	"github.com/atvirokodosprendimai/webmail/internal/db"
 	"github.com/atvirokodosprendimai/webmail/internal/httpx"
+	"github.com/atvirokodosprendimai/webmail/internal/issues"
 	"github.com/atvirokodosprendimai/webmail/internal/mailbox"
 	"github.com/atvirokodosprendimai/webmail/internal/notes"
 	"github.com/atvirokodosprendimai/webmail/internal/projects"
@@ -115,6 +116,7 @@ func runServer() error {
 	projectsRepo := projects.NewRepo(gdb)
 	notesRepo := notes.NewRepo(gdb)
 	bookmarksRepo := bookmarks.NewRepo(gdb)
+	issuesRepo := issues.NewRepo(gdb)
 	uploadStore := &uploads.Store{Root: cfg.UploadsDir}
 	if err := uploadStore.EnsureRoot(); err != nil {
 		return err
@@ -132,6 +134,7 @@ func runServer() error {
 		ProjectsRepo:  projectsRepo,
 		NotesRepo:     notesRepo,
 		BookmarksRepo: bookmarksRepo,
+		IssuesRepo:    issuesRepo,
 		Uploads:       uploadStore,
 	}
 

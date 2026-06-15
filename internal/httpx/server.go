@@ -65,6 +65,15 @@ func New(a *App) http.Handler {
 		r.Post("/thread/{id}/bookmark", a.bookmarkAdd)
 		r.Post("/bookmark/{id}/remove", a.bookmarkRemove)
 
+		r.Get("/issues", a.issuesIndex)
+		r.Post("/issues", a.issuesCreate)
+		r.Get("/issues/{id}", a.issueShow)
+		r.Post("/issues/{id}/status", a.issueStatus)
+		r.Post("/issues/{id}/title", a.issueTitle)
+		r.Post("/issues/{id}/notes", a.issueNotes)
+		r.Post("/issues/{id}/assignees", a.issueAssign)
+		r.Post("/issues/{id}/assignees/{userId}/remove", a.issueUnassign)
+
 		r.Get("/attach/{id}", a.attachDownload)
 
 		r.Get("/notes", a.notesIndex)

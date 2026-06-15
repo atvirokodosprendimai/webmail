@@ -13,6 +13,7 @@ import (
 	"github.com/atvirokodosprendimai/webmail/internal/auth"
 	"github.com/atvirokodosprendimai/webmail/internal/bookmarks"
 	"github.com/atvirokodosprendimai/webmail/internal/config"
+	"github.com/atvirokodosprendimai/webmail/internal/issues"
 	"github.com/atvirokodosprendimai/webmail/internal/mailbox"
 	"github.com/atvirokodosprendimai/webmail/internal/notes"
 	"github.com/atvirokodosprendimai/webmail/internal/projects"
@@ -37,6 +38,7 @@ type App struct {
 	ProjectsRepo  *projects.Repo
 	NotesRepo     *notes.Repo
 	BookmarksRepo *bookmarks.Repo
+	IssuesRepo    *issues.Repo
 	Uploads       *uploads.Store
 }
 
@@ -54,7 +56,15 @@ func (a *App) navCounts(ctx context.Context) render.NavCounts {
 		Joins("INNER JOIN mailbox_folder ON mailbox_folder.id = mailbox_ingest.folder_id").
 		Where("mailbox_folder.role = ? AND mailbox_ingest.seen = 0", mailbox.FolderRoleInbox).
 		Count(&unread)
-	return render.NavCounts{InboxUnread: int(unread), InboxTotal: int(total)}
+	openIssues := 0
+	if a.IssuesRepo != nil {
+		openIssues, _ = a.IssuesRepo.CountOpen(ctx)
+	}
+	return render.NavCounts{
+		InboxUnread: int(unread),
+		InboxTotal:  int(total),
+		IssuesOpen:  openIssues,
+	}
 }
 
 type viewerKey struct{}
@@ -309,8 +319,221 @@ func (a *App) thread(w http.ResponseWriter, r *http.Request) {
 			bookState.SharedID = shared[0].ID
 		}
 	}
+	// Issue banner (if a thread has already been promoted to one).
+	issueBanner := render.IssueBanner{}
+	if iss, ierr := a.IssuesRepo.FindByMessageID(r.Context(), ing.MessageID); ierr == nil {
+		issueBanner = render.IssueBanner{
+			IssueID: iss.ID,
+			Number:  iss.Number,
+			Status:  iss.Status,
+			Title:   iss.Title,
+		}
+	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	_ = render.Thread(u.DisplayName, a.navCounts(r.Context()), subject, msgs, opts, tagged, bookState).Render(r.Context(), w)
+	_ = render.Thread(u.DisplayName, a.navCounts(r.Context()), subject, msgs, opts, tagged, bookState, issueBanner).Render(r.Context(), w)
+}
+
+// --- issues ---
+
+func (a *App) issuesIndex(w http.ResponseWriter, r *http.Request) {
+	u := auth.CurrentUser(r)
+	status := r.URL.Query().Get("status")
+	if status == "" {
+		status = "open"
+	}
+	mine := r.URL.Query().Get("mine") == "1"
+	q := strings.TrimSpace(r.URL.Query().Get("q"))
+	opts := issues.ListOptions{Status: status, Search: q, Limit: 200}
+	if status == "all" {
+		opts.Status = ""
+	}
+	if mine {
+		opts.AssignedTo = u.ID
+	}
+	rows, err := a.IssuesRepo.List(r.Context(), opts)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	out := make([]render.IssueRow, 0, len(rows))
+	for _, it := range rows {
+		out = append(out, render.IssueRow{
+			ID:        it.ID,
+			Number:    it.Number,
+			Title:     it.Title,
+			Status:    it.Status,
+			UpdatedAt: it.UpdatedAt,
+			Assignees: a.loadAssignees(r.Context(), it.ID),
+		})
+	}
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	_ = render.Issues(u.DisplayName, a.navCounts(r.Context()), out, render.IssueListFilters{
+		Status: status, AssignedMe: mine, Search: q,
+	}).Render(r.Context(), w)
+}
+
+func (a *App) loadAssignees(ctx context.Context, issueID string) []render.IssueAssignee {
+	ids, err := a.IssuesRepo.AssigneesFor(ctx, issueID)
+	if err != nil || len(ids) == 0 {
+		return nil
+	}
+	var users []auth.User
+	a.DB.WithContext(ctx).Where("id IN ?", ids).Find(&users)
+	out := make([]render.IssueAssignee, 0, len(users))
+	for _, u := range users {
+		out = append(out, render.IssueAssignee{
+			UserID: u.ID, DisplayName: u.DisplayName, Email: u.Email,
+		})
+	}
+	return out
+}
+
+func (a *App) issuesCreate(w http.ResponseWriter, r *http.Request) {
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "bad form", http.StatusBadRequest)
+		return
+	}
+	u := auth.CurrentUser(r)
+	ingestID := r.FormValue("ingest_id")
+	messageID := r.FormValue("message_id")
+	title := r.FormValue("title")
+	if ingestID != "" {
+		ing, ierr := a.MailboxRepo.FindIngest(r.Context(), ingestID)
+		if ierr != nil {
+			http.Error(w, "thread not found", http.StatusNotFound)
+			return
+		}
+		messageID = ing.MessageID
+		if title == "" {
+			title = mailbox.DecodeHeader(ing.Subject)
+		}
+	}
+	if messageID == "" {
+		http.Error(w, "message_id required", http.StatusBadRequest)
+		return
+	}
+	it, _, err := a.IssuesRepo.CreateFromThread(r.Context(), messageID, title, u.ID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	http.Redirect(w, r, "/issues/"+it.ID, http.StatusSeeOther)
+}
+
+func (a *App) issueShow(w http.ResponseWriter, r *http.Request) {
+	u := auth.CurrentUser(r)
+	id := chi.URLParam(r, "id")
+	it, err := a.IssuesRepo.FindByID(r.Context(), id)
+	if err != nil {
+		http.Error(w, "not found", http.StatusNotFound)
+		return
+	}
+	// Find an ingest row for this thread so we can link to the email view.
+	threadIngestID, threadSubject := "", ""
+	if ing, ferr := a.MailboxRepo.FindIngestByMessageID(r.Context(), it.MessageID); ferr == nil {
+		threadIngestID = ing.ID
+		threadSubject = mailbox.DecodeHeader(ing.Subject)
+	}
+	assignees := a.loadAssignees(r.Context(), it.ID)
+	assignedSet := map[string]bool{}
+	for _, a := range assignees {
+		assignedSet[a.UserID] = true
+	}
+	// Candidates = every user not already assigned.
+	var users []auth.User
+	a.DB.WithContext(r.Context()).Order("display_name ASC").Find(&users)
+	cands := make([]render.IssueAssignee, 0, len(users))
+	for _, uu := range users {
+		if assignedSet[uu.ID] {
+			continue
+		}
+		cands = append(cands, render.IssueAssignee{
+			UserID: uu.ID, DisplayName: uu.DisplayName, Email: uu.Email,
+		})
+	}
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	_ = render.IssueShow(u.DisplayName, a.navCounts(r.Context()), render.IssueDetail{
+		ID:             it.ID,
+		Number:         it.Number,
+		Title:          it.Title,
+		NotesMD:        it.NotesMD,
+		NotesHTML:      it.NotesHTML,
+		Status:         it.Status,
+		UpdatedAt:      it.UpdatedAt,
+		CreatedAt:      it.CreatedAt,
+		ThreadIngestID: threadIngestID,
+		ThreadSubject:  threadSubject,
+		Assignees:      assignees,
+		Candidates:     cands,
+	}).Render(r.Context(), w)
+}
+
+func (a *App) issueStatus(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "bad form", http.StatusBadRequest)
+		return
+	}
+	st := r.FormValue("status")
+	if err := a.IssuesRepo.SetStatus(r.Context(), id, st); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	http.Redirect(w, r, "/issues/"+id, http.StatusSeeOther)
+}
+
+func (a *App) issueTitle(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "bad form", http.StatusBadRequest)
+		return
+	}
+	if err := a.IssuesRepo.SetTitle(r.Context(), id, r.FormValue("title")); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	http.Redirect(w, r, "/issues/"+id, http.StatusSeeOther)
+}
+
+func (a *App) issueNotes(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "bad form", http.StatusBadRequest)
+		return
+	}
+	if err := a.IssuesRepo.SetNotes(r.Context(), id, r.FormValue("notes_md")); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	http.Redirect(w, r, "/issues/"+id, http.StatusSeeOther)
+}
+
+func (a *App) issueAssign(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "bad form", http.StatusBadRequest)
+		return
+	}
+	userID := r.FormValue("user_id")
+	if userID == "" {
+		http.Redirect(w, r, "/issues/"+id, http.StatusSeeOther)
+		return
+	}
+	if err := a.IssuesRepo.Assign(r.Context(), id, userID); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	http.Redirect(w, r, "/issues/"+id, http.StatusSeeOther)
+}
+
+func (a *App) issueUnassign(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	userID := chi.URLParam(r, "userId")
+	if err := a.IssuesRepo.Unassign(r.Context(), id, userID); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	http.Redirect(w, r, "/issues/"+id, http.StatusSeeOther)
 }
 
 func (a *App) threadSeen(w http.ResponseWriter, r *http.Request) {
