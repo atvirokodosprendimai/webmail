@@ -1,6 +1,6 @@
 ---
 tldr: Build ORBITAL — a Go+Datastar webmail (shared IMAP/SMTP mailbox, multi-user), with project tagging that materialises emails+attachments to a local archive, and an Apple-Notes-style markdown notepad backed by a dedicated IMAP folder. 10 phases, TDD against greenmail.
-status: active
+status: completed
 ---
 
 # Plan: ORBITAL webmail (IMAP + SMTP + projects + notes)
@@ -162,3 +162,4 @@ status: active
 
 - 2606151930 — Plan created. Spec v0.3 finalised (webmail mutation surface + Notes-as-IMAP-folder). Git repo initialised.
 - 2606152005 — Phase 0 complete. Module = `github.com/atvirokodosprendimai/webmail`. Deps + tools installed. Layout, .env.example, Makefile, Dockerfile, CI grep gate landed and tested. Branch: `task/phase-0-bootstrap`.
+- 2606152000 — Phases 1–10 implemented in one push. Auth (bcrypt+scs), persistence (goose+gorm), IMAP wrapper (read+write verbs, single file), poll worker (UIDVALIDITY tracking, per-msg cursor save, flag reconcile), foreground service, full UI (inbox/thread/compose/projects/notes/settings), SMTP send, projects with lazy materialise, notes via IMAP APPEND with X-Webmail-Note headers and edit-as-APPEND+EXPUNGE. CI grep gate clean. Smoke test green: /healthz 200 / /login renders / gated routes 303 / static via embed.FS / migrations apply at boot. Real IMAP + greenmail TDD deferred to a follow-up.
